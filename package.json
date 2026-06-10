@@ -1,0 +1,7 @@
+{
+  "name": "tos-rag",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter backend dev"
+  }
+}
