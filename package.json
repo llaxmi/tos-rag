@@ -2,6 +2,9 @@
   "name": "tos-rag",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter backend dev"
+    "dev": "pnpm --filter backend dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "build": "pnpm -r build"
   }
 }
