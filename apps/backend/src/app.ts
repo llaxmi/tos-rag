@@ -3,7 +3,9 @@ import { cors } from "hono/cors";
 import { z } from "zod";
 import {
   buildRagPrompt,
+  CHUNK_SIZES,
   isAbstention,
+  STRATEGIES,
   type RetrievedChunk,
   type Strategy,
 } from "@tos-rag/core";
@@ -15,8 +17,12 @@ export interface GenerationResult {
   latencyMs: number;
 }
 
+export type GeneratorModel = "llama" | "opus";
+
 export interface RetrieveOptions {
   docId?: string;
+  strategy?: Strategy;
+  chunkSize?: number;
 }
 
 export interface AnalysisRow {
@@ -25,15 +31,19 @@ export interface AnalysisRow {
 }
 
 /**
- * Injected dependencies (PRD §4): the app is environment-agnostic — the same
- * routes run under Node locally and as a Cloudflare Worker; only deps differ.
+ * Injected dependencies (PRD §4): the app is environment-agnostic — routes
+ * never construct a client or read `process.env` directly, only deps differ.
+ * The backend runs as a Node process only (PRD §15).
  */
 export interface AppDeps {
   retrieve: (
     question: string,
     opts?: RetrieveOptions,
   ) => Promise<RetrievedChunk[]>;
-  generate: (prompt: string) => Promise<GenerationResult>;
+  generate: (
+    prompt: string,
+    model: GeneratorModel,
+  ) => Promise<GenerationResult>;
   getAnalysisResults: () => Promise<AnalysisRow[]>;
   winningConfig: { strategy: Strategy; chunkSize: number };
 }
@@ -41,6 +51,14 @@ export interface AppDeps {
 const AskSchema = z.object({
   question: z.string().min(1).max(2000),
   docId: z.enum(["github-tos", "netflix-tou"]).optional(),
+  strategy: z.enum(STRATEGIES).optional(),
+  chunkSize: z
+    .number()
+    .refine((n) => (CHUNK_SIZES as readonly number[]).includes(n), {
+      message: `chunkSize must be one of ${CHUNK_SIZES.join(", ")}`,
+    })
+    .optional(),
+  model: z.enum(["llama", "opus"]).optional(),
 });
 
 export function createApp(deps: AppDeps) {
@@ -54,23 +72,39 @@ export function createApp(deps: AppDeps) {
     if (!parsed.success) {
       return c.json({ error: "question is required" }, 400);
     }
-    const { question, docId } = parsed.data;
+    const { question, docId, strategy, chunkSize, model } = parsed.data;
 
-    const t0 = Date.now();
-    const evidence = await deps.retrieve(question, { docId });
-    const retrievalMs = Date.now() - t0;
+    // The proposal's three experimental variables are selectable; anything
+    // omitted falls back to the winning configuration and the open model.
+    const config = {
+      strategy: strategy ?? deps.winningConfig.strategy,
+      chunkSize: chunkSize ?? deps.winningConfig.chunkSize,
+    };
+    const generator: GeneratorModel = model ?? "llama";
 
-    const { answer, latencyMs, inputTokens, outputTokens } =
-      await deps.generate(buildRagPrompt(question, evidence));
+    try {
+      const t0 = Date.now();
+      const evidence = await deps.retrieve(question, { docId, ...config });
+      const retrievalMs = Date.now() - t0;
 
-    return c.json({
-      answer,
-      abstained: isAbstention(answer),
-      evidence,
-      config: deps.winningConfig,
-      timings: { retrievalMs, generationMs: latencyMs },
-      tokens: { input: inputTokens, output: outputTokens },
-    });
+      const { answer, latencyMs, inputTokens, outputTokens } =
+        await deps.generate(buildRagPrompt(question, evidence), generator);
+
+      return c.json({
+        answer,
+        abstained: isAbstention(answer),
+        evidence,
+        config,
+        model: generator,
+        timings: { retrievalMs, generationMs: latencyMs },
+        tokens: { input: inputTokens, output: outputTokens },
+      });
+    } catch (e) {
+      return c.json(
+        { error: e instanceof Error ? e.message : "pipeline failure" },
+        503,
+      );
+    }
   });
 
   app.get("/api/results", async (c) => {

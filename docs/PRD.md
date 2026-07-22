@@ -366,7 +366,8 @@ TS never computes inferential statistics. A Python script reads per-question sco
 ### Chat (`/`)
 
 - Question input over the fixed corpus (optional doc filter chips: GitHub / Netflix / both).
-- Answer rendered with the winning config + chosen generator; abstentions displayed distinctly.
+- **Pipeline bench** (amendment 2026-07-18): the proposal's three experimental variables are user-selectable per question — chunking strategy (5), chunk size (128/256/512), and generator (Llama / Opus) — defaulting to the winning config + Llama, with a reset-to-winner affordance. Live mode resolves the selection against the `configs` table (a not-yet-ingested config returns a clear 503); Opus requires `ANTHROPIC_API_KEY`. The constants (k=8, embedder, prompt) stay fixed.
+- Answer rendered with the selected config + generator; abstentions displayed distinctly.
 - **Evidence panel**: the k retrieved chunks with similarity scores, doc + section, and character ranges; clicking highlights the chunk text.
 - Footer states the winning config (strategy × size) so the demo is self-describing.
 
@@ -411,6 +412,18 @@ All dashboard data comes from `/api/results/*` reading `analysis_results` (+ raw
 | 3 | pdf-parse of corpus PDFs | Canonical Markdown from official web sources | cleaner canonical text; deterministic char offsets; PDFs kept as archival snapshots |
 | 4 | Stats implied in-pipeline | Python (scipy/statsmodels) for inferential stats | exact Wilcoxon with ties/zeros and BCa bootstrap are not reliably available in JS |
 | 5 | Overlap unspecified | Overlap fixed at 0 | cited literature: overlap adds cost without quality gains |
+| 6 | Embedding via Workers AI (`@cf/google/embeddinggemma-300m`) | **Local** `onnx-community/embeddinggemma-300m-ONNX` (transformers.js, fp32) for both ingestion and query | Cloudflare documents neither its serving dtype nor its pooling, exposes no prompt-prefix parameter, and caps input at 512 tokens vs the model's 2048. Indexing locally and querying remotely would make retrieval metrics measure an uncharacterizable vector-space mismatch. Same weights on both sides is the control. |
+| 7 | Backend deployable as a Cloudflare Worker | `/api/ask` is **Node-only** | Follows from #6: ~1.2 GB of ONNX weights cannot run in a Worker. The CF embedder was initially retained behind `EMBEDDER=cf` so the Worker path could be a config swap, gated on a local↔CF cosine parity check (`test:live`); it was removed entirely on 2026-07-22 (see the dated §15 entry below) once the Worker path was abandoned. |
+| 8 | §9 `match_chunks(config_id, query, k)` | Adds `p_doc_id text default null`, filtered inside the scan | The doc filter previously ran in TypeScript *after* the RPC returned k rows, so a doc-scoped question silently came back with fewer than k chunks, or none. |
+| 9 | §9 schema as written | Adds `create extension vector` and RLS (enabled, no policies) on all 7 tables | The extension is needed on a fresh project. RLS changes nothing operationally — the backend uses the service-role key, which bypasses it — but silences the Supabase "table exposed" advisor. |
+| 10 | §5 GitHub ToS at `Policies/github-terms-of-service.md` | `Policies/github-terms/github-terms-of-service.md` | Upstream moved the file; the flat path is a 404. |
+
+- **2026-07-22 — Cloudflare removed.** The backend runs as a Node process only;
+  the Cloudflare Worker deployment path is abandoned. The open generator arm
+  (Llama 3.1 8B) is served by a local Ollama runtime (`/api/generate`) instead
+  of Workers AI — same model, different runtime. The `EMBEDDER=cf` query-time
+  embedder is deleted (the local ONNX embedder was already the ingest embedder).
+  The offline demo deps are removed; the backend now requires `DATABASE_URL`.
 
 ## 16. Acceptance Criteria
 
