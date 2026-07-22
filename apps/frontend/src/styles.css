@@ -1,0 +1,182 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* packages/ui is consumed as source, so Tailwind has to scan it too */
+@source "../../../packages/ui/src";
+
+/* ————————————————————————————————————————————————
+   tos-rag — navy on white · light only
+   see docs/design.md
+   signature: the cut mark (a hairline with end ticks = a chunk boundary)
+
+   Two vocabularies live here on purpose:
+   · shadcn's semantic contract (--background, --primary, --muted, --accent…)
+     so its components theme correctly. Note --accent is shadcn's *hover
+     surface*, not a brand colour.
+   · our own roles (--compare, --seq-*, --rule-strong) for things shadcn has
+     no concept of: the two-sided model comparison and the heatmap ramp.
+   ———————————————————————————————————————————————— */
+:root {
+  --radius: 0.5rem;
+
+  /* shadcn semantic contract */
+  --background: #ffffff;
+  --foreground: #0b1f3a;
+  --card: #f5f7fa;
+  --card-foreground: #0b1f3a;
+  --popover: #ffffff;
+  --popover-foreground: #0b1f3a;
+  --primary: #0b1f3a;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f7fa;
+  --secondary-foreground: #0b1f3a;
+  --muted: #f5f7fa;
+  --muted-foreground: #5f6e84; /* 4.83:1 on --card — lightest text permitted */
+  --accent: #ecf1f7; /* hover surface, per shadcn's meaning */
+  --accent-foreground: #0b1f3a;
+  --destructive: #a5342b;
+  --destructive-foreground: #ffffff;
+  --border: #dde3ea;
+  --input: #7b8b9f; /* 3.24:1 on --card — a field's border identifies it */
+  --ring: #1b6dd9;
+
+  /* ours */
+  --ink-soft: #4a5b72;
+  --rule-strong: #b9c4d1; /* decorative dividers and cut marks only */
+  --compare: #9c580f; /* the counterpart in a two-way comparison */
+  --compare-wash: #fbf1e3;
+
+  /* sequential ramp — mirrors SEQ_RAMP in packages/shared/src/scale.ts.
+     seq-4 sits darker than an even interpolation: the midpoint of a
+     white→navy ramp is a contrast dead zone where neither ink nor paper
+     labels reach 4.5:1, and every heatmap cell prints its value. */
+  --seq-0: #eef3f9;
+  --seq-1: #d3e0ee;
+  --seq-2: #afc6de;
+  --seq-3: #85a5c9;
+  --seq-4: #4a73a3;
+  --seq-5: #33588a;
+  --seq-6: #0b1f3a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ink-soft: var(--ink-soft);
+  --color-rule-strong: var(--rule-strong);
+  --color-compare: var(--compare);
+  --color-compare-wash: var(--compare-wash);
+
+  --color-seq-0: var(--seq-0);
+  --color-seq-1: var(--seq-1);
+  --color-seq-2: var(--seq-2);
+  --color-seq-3: var(--seq-3);
+  --color-seq-4: var(--seq-4);
+  --color-seq-5: var(--seq-5);
+  --color-seq-6: var(--seq-6);
+
+  --font-sans: "Cause", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* the inverted weight contrast: display is light, and only ever large.
+     Never set Cause 200 below 28px — it goes anaemic. */
+  h1 {
+    font-size: clamp(34px, 5vw, 52px);
+    font-weight: 200;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  h2 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  /* every number in the app aligns on the decimal */
+  .font-mono,
+  table td,
+  table th {
+    font-variant-numeric: tabular-nums;
+  }
+  svg text {
+    font-family: var(--font-sans);
+  }
+  svg .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* the signature element — a cut through a document */
+  .cut-mark-rule {
+    @apply relative block h-px bg-rule-strong;
+  }
+  .cut-mark-rule::before,
+  .cut-mark-rule::after {
+    content: "";
+    @apply absolute -top-[3px] h-[7px] w-px bg-rule-strong;
+  }
+  .cut-mark-rule::before {
+    @apply left-0;
+  }
+  .cut-mark-rule::after {
+    @apply right-0;
+  }
+
+  /* the one orchestrated moment: cells assemble in reading order.
+     Staggered per-cell from the component via animation-delay. */
+  .heat-cell {
+    animation: cell-in 0.16s ease-out both;
+  }
+}
+
+@keyframes cell-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
