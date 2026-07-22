@@ -1,0 +1,14 @@
+{
+  "github-tos": {
+    "title": "GitHub Terms of Service",
+    "sha256": "feb8b9943f1fb8e95391807bbd1779a288ed9e775fede5052607fc2a43ead35d",
+    "version": 1,
+    "charLength": 49101
+  },
+  "netflix-tou": {
+    "title": "Netflix Terms of Use",
+    "sha256": "a3ac5adff183ae2591593ced2608611e60fe5f8fb1f39650f620cc580589c3fd",
+    "version": 1,
+    "charLength": 22130
+  }
+}

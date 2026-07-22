@@ -18,6 +18,10 @@ export {
 export { ABSTENTION_TEXT, buildRagPrompt, isAbstention } from "./prompts";
 export {
   CHUNK_SIZES,
+  EMBED_BATCH_MAX,
+  EMBED_DIMS,
+  EMBED_MAX_TOKENS,
+  EMBED_PREFIXES,
   GENERATION_MAX_TOKENS,
   GENERATION_SEED,
   GoldSpanSchema,

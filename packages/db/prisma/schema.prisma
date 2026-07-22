@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model documents {
+  id          String @id
+  title       String
+  sha256      String
+  version     Int    @default(1)
+  char_length Int
+  chunks      chunks[]
+  questions   questions[]
+}
+
+model configs {
+  id         Int      @id @default(autoincrement())
+  strategy   String
+  chunk_size Int
+  chunks     chunks[]
+  runs       runs[]
+
+  @@unique([strategy, chunk_size])
+}
+
+model chunks {
+  id          BigInt @id @default(autoincrement())
+  config_id   Int
+  doc_id      String
+  char_start  Int
+  char_end    Int
+  text        String
+  token_count Int
+  embedding   Unsupported("vector(768)")
+  configs     configs   @relation(fields: [config_id], references: [id])
+  documents   documents @relation(fields: [doc_id], references: [id])
+
+  @@index([config_id])
+}
+
+model questions {
+  id              String @id
+  doc_id          String
+  qtype           String
+  question        String
+  expected_answer String
+  gold_spans      Json
+  phase1          Boolean
+  documents       documents @relation(fields: [doc_id], references: [id])
+  runs            runs[]
+}
+
+model runs {
+  id             BigInt   @id @default(autoincrement())
+  phase          Int
+  config_id      Int
+  model          String
+  question_id    String
+  retrieved      Json
+  answer         String
+  retrieval_ms   Int?
+  generation_ms  Int?
+  input_tokens   Int?
+  output_tokens  Int?
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  configs        configs   @relation(fields: [config_id], references: [id])
+  questions      questions @relation(fields: [question_id], references: [id])
+  evals          evals?
+
+  @@unique([phase, config_id, model, question_id])
+}
+
+model evals {
+  run_id           BigInt  @id
+  char_precision   Float?
+  char_recall      Float?
+  hit_at_8         Float?
+  faithfulness     Float?
+  crag_score       Int?
+  judge_explanation String?
+  squad_f1         Float?
+  squad_em         Float?
+  cosine_sim       Float?
+  cost_usd         Decimal? @db.Decimal(10, 6)
+  runs             runs @relation(fields: [run_id], references: [id])
+}
+
+model analysis_results {
+  id          BigInt   @id @default(autoincrement())
+  analysis    String
+  payload     Json
+  computed_at DateTime @default(now()) @db.Timestamptz(6)
+}
