@@ -7,18 +7,21 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "typecheck": "tsc --noEmit",
+    "ingest": "tsx src/scripts/ingest.ts",
+    "fetch-canonical": "tsx src/scripts/fetch-canonical.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.28.1",
   "dependencies": {
     "@hono/node-server": "^2.0.4",
-    "@supabase/supabase-js": "^2.108.1",
+    "@huggingface/transformers": "^4.2.0",
+    "@tos-rag/core": "workspace:*",
+    "@tos-rag/db": "workspace:*",
     "dotenv": "^17.4.2",
     "hono": "^4.12.25",
-    "@tos-rag/core": "workspace:*",
     "zod": "^4.3.5"
   },
   "devDependencies": {
