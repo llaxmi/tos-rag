@@ -2,7 +2,19 @@ packages:
   - apps/*
   - packages/*
 
+# Packages permitted to run install scripts.
+#
+# onnxruntime-node is required: @huggingface/transformers loads its native
+# binding through it, and without the install script the local embedder fails
+# at import time. sharp comes along for transformers.js's image pipelines —
+# unused here, but it is imported eagerly, so it has to be built.
 onlyBuiltDependencies:
   - esbuild
+  - onnxruntime-node
+  - sharp
+
 allowBuilds:
-  esbuild: set this to true or false
+  '@prisma/client': true
+  '@prisma/engines': true
+  prisma: true
+  supabase: true
