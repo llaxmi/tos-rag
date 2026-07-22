@@ -1,0 +1,13 @@
+# Prisma / env
+.env
+.env.local
+
+# Prisma generated client (regenerated via postinstall: prisma generate)
+node_modules/
+
+# Supabase local state (moved from the old root supabase/.gitignore)
+supabase/.branches
+supabase/.temp
+supabase/.env.keys
+supabase/.env.local
+supabase/.env.*.local
