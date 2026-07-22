@@ -24,7 +24,14 @@ export interface SemanticChunkerOptions extends ChunkerOptions {
   embed: EmbedFn;
 }
 
-export type Strategy = "fixed" | "recursive" | "sentence" | "semantic" | "section";
+/**
+ * The five chunking strategies under test (PRD §7). Single source of truth:
+ * this is a frozen experimental control, so the backend zod schema, the ingest
+ * validator, the config seed, and the demo grid all derive from this one tuple
+ * rather than re-typing the list. `Strategy` is its element union.
+ */
+export const STRATEGIES = ["fixed", "recursive", "sentence", "semantic", "section"] as const;
+export type Strategy = (typeof STRATEGIES)[number];
 
 /** A character span within a canonical document. */
 export interface Span {

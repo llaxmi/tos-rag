@@ -1,101 +1,128 @@
-import { createClient } from "@supabase/supabase-js";
-import type { RetrievedChunk } from "@tos-rag/core";
-import { GENERATION_MAX_TOKENS, GENERATION_SEED, MODEL_IDS, RETRIEVAL_K } from "@tos-rag/core";
-import type { AppDeps } from "../app";
+import type { RetrievedChunk, Strategy } from "@tos-rag/core";
+import { GENERATION_MAX_TOKENS, MODEL_IDS, RETRIEVAL_K } from "@tos-rag/core";
+import { matchChunks, prisma, resolveConfigId } from "@tos-rag/db";
+import type { Embedder } from "../adapters/embedder";
+import type { AppDeps, GenerationResult } from "../app";
+import { generateOllama } from "./ollama";
 
 export interface LiveEnv {
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_ROLE_KEY: string;
-  CF_ACCOUNT_ID: string;
-  CF_API_TOKEN: string;
-  WINNING_CONFIG_ID: string;
+  OLLAMA_URL: string;
+  OLLAMA_MODEL: string;
+  ANTHROPIC_API_KEY?: string;
 }
+
+/** The Phase 1 winning configuration — the demo's default pipeline (PRD §7). */
+const WINNING_CONFIG = { strategy: "sentence", chunkSize: 256 } as const;
 
 /**
  * Live dependencies (PRD §4/§8): pgvector exact-scan retrieval via the
- * match_chunks RPC and Workers AI REST for embedding + generation. The same
- * logic runs in the Worker via the env.AI binding.
+ * match_chunks RPC, generation via a local Ollama server (Llama, PRD §15) or
+ * the Anthropic Messages API (Opus). Configs are resolved against the
+ * `configs` table.
+ *
+ * The embedder is injected rather than constructed here: it owns a loaded ONNX
+ * model that must be created once at boot, not per request, and injecting it
+ * keeps this module testable with a fake.
  */
-export function createLiveDeps(env: LiveEnv): AppDeps {
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-  const aiUrl = (model: string) =>
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/ai/run/${model}`;
+export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
+  // Memoizes the DB lookup: the config grid is fixed per process, so each
+  // (strategy, size) id is resolved once and cached for the process lifetime.
+  const configIds = new Map<string, number>();
+  async function cachedConfigId(
+    strategy: Strategy,
+    chunkSize: number,
+  ): Promise<number> {
+    const key = `${strategy}:${chunkSize}`;
+    const cached = configIds.get(key);
+    if (cached !== undefined) return cached;
+    const id = await resolveConfigId(strategy, chunkSize);
+    configIds.set(key, id);
+    return id;
+  }
 
-  async function runAi<T>(model: string, payload: unknown): Promise<T> {
-    const res = await fetch(aiUrl(model), {
+  async function generateOpus(prompt: string): Promise<GenerationResult> {
+    if (!env.ANTHROPIC_API_KEY) {
+      throw new Error(
+        "Claude Opus generator isn't configured — set ANTHROPIC_API_KEY, or switch back to Llama.",
+      );
+    }
+    const t0 = Date.now();
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        authorization: `Bearer ${env.CF_API_TOKEN}`,
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        model: MODEL_IDS.opus,
+        max_tokens: GENERATION_MAX_TOKENS,
+        temperature: 0,
+        messages: [{ role: "user", content: prompt }],
+      }),
     });
     if (!res.ok) {
-      throw new Error(`Workers AI ${model} failed: ${res.status} ${await res.text()}`);
+      throw new Error(`Anthropic API failed: ${res.status} ${await res.text()}`);
     }
-    const json = (await res.json()) as { result: T };
-    return json.result;
+    const json = (await res.json()) as {
+      content: Array<{ type: string; text?: string }>;
+      usage: { input_tokens: number; output_tokens: number };
+    };
+    const answer = json.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text ?? "")
+      .join("")
+      .trim();
+    return {
+      answer,
+      inputTokens: json.usage.input_tokens,
+      outputTokens: json.usage.output_tokens,
+      latencyMs: Date.now() - t0,
+    };
   }
 
   return {
     retrieve: async (question, opts) => {
-      const { data: embedding } = await runAi<{ data: number[][] }>(
-        MODEL_IDS.embedder,
-        { text: [question] },
+      // app.ts always fills strategy/chunkSize from winningConfig, so both are
+      // present on every call and the config is resolved by identity.
+      const configId = await cachedConfigId(
+        opts?.strategy ?? WINNING_CONFIG.strategy,
+        opts?.chunkSize ?? WINNING_CONFIG.chunkSize,
       );
-      const { data, error } = await supabase.rpc("match_chunks", {
-        p_config_id: Number(env.WINNING_CONFIG_ID),
-        p_query: embedding[0],
-        p_k: RETRIEVAL_K,
-      });
-      if (error) throw new Error(`match_chunks failed: ${error.message}`);
-      const rows = (data ?? []) as Array<{
-        doc_id: string;
-        char_start: number;
-        char_end: number;
-        text: string;
-        score: number;
-      }>;
-      return rows
-        .filter((r) => !opts?.docId || r.doc_id === opts.docId)
-        .map(
-          (r): RetrievedChunk => ({
-            docId: r.doc_id,
-            charStart: r.char_start,
-            charEnd: r.char_end,
-            text: r.text,
-            score: r.score,
-          }),
-        );
+      const vector = await embedder.embedQuery(question);
+      const rows = await matchChunks(
+        configId,
+        vector,
+        RETRIEVAL_K,
+        // Filtered inside the scan, so a doc-scoped question still gets k rows.
+        opts?.docId ?? null,
+      );
+      return rows.map(
+        (r): RetrievedChunk => ({
+          docId: r.doc_id,
+          charStart: r.char_start,
+          charEnd: r.char_end,
+          text: r.text,
+          score: r.score,
+        }),
+      );
     },
 
-    generate: async (prompt) => {
-      const t0 = Date.now();
-      const result = await runAi<{
-        response: string;
-        usage?: { prompt_tokens: number; completion_tokens: number };
-      }>(MODEL_IDS.llama, {
-        prompt,
-        temperature: 0,
-        seed: GENERATION_SEED,
-        max_tokens: GENERATION_MAX_TOKENS,
-      });
-      return {
-        answer: result.response.trim(),
-        inputTokens: result.usage?.prompt_tokens ?? 0,
-        outputTokens: result.usage?.completion_tokens ?? 0,
-        latencyMs: Date.now() - t0,
-      };
-    },
+    generate: (prompt, model) =>
+      model === "opus"
+        ? generateOpus(prompt)
+        : generateOllama(
+            { url: env.OLLAMA_URL, model: env.OLLAMA_MODEL },
+            prompt,
+          ),
 
     getAnalysisResults: async () => {
-      const { data, error } = await supabase
-        .from("analysis_results")
-        .select("analysis, payload");
-      if (error) throw new Error(`analysis_results failed: ${error.message}`);
-      return data ?? [];
+      const rows = await prisma.analysis_results.findMany({
+        select: { analysis: true, payload: true },
+      });
+      return rows;
     },
 
-    winningConfig: { strategy: "sentence", chunkSize: 256 },
+    winningConfig: WINNING_CONFIG,
   };
 }
