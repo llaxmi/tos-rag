@@ -119,7 +119,7 @@ sequenceDiagram
     U->>A: POST /api/ask { question, docId?, strategy?, chunkSize?, model? }
     A->>A: zod parse; fill omitted fields from winningConfig
     A->>AI: embed(question)
-    A->>S: match_chunks(config_id, embedding, k=8)
+    A->>S: match_chunks(config_id, embedding, k=5)
     S-->>A: top-k chunks with char offsets
     A->>C: buildRagPrompt(question, evidence)
     A->>AI: generate(prompt) — temp 0, seed 42, max_tokens 1024
@@ -192,8 +192,8 @@ corrupts precision/recall for every question that touches that region.
 the five chunkers are hand-rolled rather than delegated to off-the-shelf splitters,
 which routinely trim.
 
-**Frozen experiment constants.** k = 8, temperature 0, seed 42, `max_tokens` 1024, chunk
-sizes 128/256/512, zero overlap, one fixed prompt template. These live in
+**Frozen experiment constants.** k = 5 (amended 2026-07-23; was 8), temperature 0, seed 42,
+`max_tokens` 1024, chunk sizes 128/256/512, zero overlap, one fixed prompt template. These live in
 `packages/core/src/schemas.ts` as constants, not configuration. They are experimental
 controls: changing one invalidates every run collected so far and requires a PRD
 amendment. The explicit `max_tokens` matters especially — generator API defaults are
