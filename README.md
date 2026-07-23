@@ -7,34 +7,110 @@ A controlled experiment on **RAG pipeline design over Terms-of-Service documents
 - `docs/design.md` — the frontend/visual design spec.
 - `CLAUDE.md` — orientation for the codebase and its invariants.
 
-This README covers **getting the project running on a fresh machine**.
+**This README is a step-by-step setup guide written for someone new to the project.** No prior knowledge of RAG, pgvector, or monorepos is assumed. Follow it top to bottom.
+
+---
+
+## What you're setting up (in plain English)
+
+The app answers questions about legal Terms-of-Service documents by (1) finding the most relevant passages in a document, then (2) asking a language model to answer using only those passages. To do that on your machine you need four things running:
+
+| Piece | What it is | Why it's here |
+| --- | --- | --- |
+| **The app** | A backend API + a web page | What you actually open in the browser |
+| **Postgres + pgvector** | A database that can search by meaning | Stores the document passages and finds relevant ones |
+| **Ollama** | Runs an AI model locally on your computer | Generates the "Llama" answers, free and offline |
+| **Embedder** | A small AI model (~1.2 GB) that downloads itself on first use | Turns text into the numbers the database searches over |
+
+The **Opus** answers (Claude) are optional and need an Anthropic API key. Everything else runs locally and free.
+
+> ⏱️ **Time & disk:** budget ~30 minutes end-to-end. First run downloads ~1.2 GB (the embedder) plus ~5 GB (the Llama model). Both are cached — you download them once.
 
 ---
 
 ## Prerequisites
 
-| Tool | Why | Install |
+Install these first. On each row, the last column is how to get it.
+
+| Tool | Why you need it | How to install |
 | --- | --- | --- |
-| **Node.js ≥ 20** (22 LTS recommended) | Runs the backend, scripts, and Vite | [nodejs.org](https://nodejs.org) |
-| **pnpm 11.12.0** | Workspace package manager (pinned in `package.json`) | `corepack enable` (ships with Node) |
-| **Docker** | Runs the local Supabase Postgres stack (pgvector) | [docker.com](https://www.docker.com/products/docker-desktop/) |
-| **Ollama** | Serves the open generator arm, Llama 3.1 8B | `brew install ollama` |
-| Anthropic API key | *Optional* — enables the Opus generator arm (Phase 2) | [console.anthropic.com](https://console.anthropic.com) |
+| **Node.js ≥ 20** (22 LTS recommended) | Runs the backend, scripts, and the web build | [nodejs.org](https://nodejs.org) — download the LTS installer |
+| **pnpm 11.12.0** | The package manager this repo uses | Comes with Node — see the one-time command below |
+| **Docker Desktop** | Runs the local database in a container | [docker.com](https://www.docker.com/products/docker-desktop/) — install, then **launch the app so it's running** |
+| **Ollama** | Runs the Llama model locally | macOS: `brew install ollama` · other: [ollama.com/download](https://ollama.com/download) |
+| **Anthropic API key** | *Optional* — turns on the Opus answers | [console.anthropic.com](https://console.anthropic.com) |
 
-> **Heads-up: first ingest/query downloads ~1.2 GB.** Embeddings run
-> `embeddinggemma-300m` locally via ONNX; the weights are fetched from Hugging
-> Face on first use and cached under your home directory.
-
-Enable pnpm via Corepack (once):
+**Turn on pnpm (run once):**
 
 ```bash
 corepack enable
 corepack prepare pnpm@11.12.0 --activate
 ```
 
+**Check everything is present** before continuing:
+
+```bash
+node -v     # should print v20.x or higher
+pnpm -v     # should print 11.12.0
+docker ps   # should list containers (even if empty) — if it errors, Docker isn't running
+ollama -v   # should print a version
+```
+
+If `docker ps` errors, open Docker Desktop and wait for it to say "running", then try again.
+
 ---
 
-## Setup
+## Quickstart (copy-paste, in order)
+
+If your prerequisites check out, this is the whole setup. Each block is explained in detail in the [Setup, step by step](#setup-step-by-step) section below — run these first, read the explanations if a step surprises you.
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Create the two env files from the committed examples (defaults work as-is)
+cp apps/backend/.env.example apps/backend/.env
+cp packages/db/.env.example   packages/db/.env
+
+# 3. Start the database, create the tables, seed the 15 configs
+pnpm --filter @tos-rag/db db:start     # needs Docker running
+pnpm --filter @tos-rag/db migrate
+pnpm --filter @tos-rag/db seed
+
+# 4. Start Ollama and pull the Llama model (~5 GB, one time)
+ollama serve                            # leave running in its own terminal; skip if Ollama.app is running
+ollama pull llama3.1:8b
+
+# 5. Load a document into the database (~1.2 GB embedder downloads on first run)
+pnpm ingest -- --doc github-tos --strategy sentence --size 256
+
+# 6. Run the app
+pnpm dev
+```
+
+Then open **http://localhost:5173** and ask a question about the GitHub Terms of Service.
+
+---
+
+## Just want to see it work? (no database, no downloads)
+
+To confirm your checkout is sound before doing the full setup, run the hermetic tests — they use fakes, so they need no database, no Ollama, and no model download:
+
+```bash
+pnpm install
+pnpm test        # unit tests across all packages
+pnpm typecheck   # type-checks every workspace
+```
+
+If those pass, the code is healthy and you can proceed to the full setup with confidence. You can also validate chunking + embedding with `--dry-run` (writes nothing, needs no database):
+
+```bash
+pnpm ingest -- --dry-run --doc github-tos --strategy sentence --size 256
+```
+
+---
+
+## Setup, step by step
 
 ### 1. Install dependencies
 
@@ -42,21 +118,18 @@ corepack prepare pnpm@11.12.0 --activate
 pnpm install
 ```
 
-This also runs `prisma generate` (via the db package's `postinstall`) so the
-Prisma client is ready.
+This downloads all packages and automatically runs `prisma generate` (via the db package's `postinstall`), so the database client is ready. Expect it to take a minute or two the first time.
 
 ### 2. Configure environment
 
-Two `.env` files are needed — one for the backend runtime, one for the Prisma
-CLI. The committed `.env.example` files use the local Supabase defaults, so
-copying them as-is works out of the box:
+The project needs two `.env` files — one for the backend, one for the database CLI. The committed `.env.example` files already contain the correct local defaults, so **copying them works out of the box**:
 
 ```bash
 cp apps/backend/.env.example apps/backend/.env
 cp packages/db/.env.example   packages/db/.env
 ```
 
-Then edit `apps/backend/.env` if you want the Opus arm:
+You only need to edit `apps/backend/.env` if you want the optional Opus (Claude) answers — paste your key into `ANTHROPIC_API_KEY`:
 
 ```dotenv
 # apps/backend/.env
@@ -68,53 +141,56 @@ EMBEDDER=local               # only supported value
 EMBEDDER_DTYPE=fp32          # fp32 | q8 | q4  (NOT fp16)
 ```
 
-### 3. Start Postgres and apply the schema
+> 🔒 `.env` files are git-ignored — your key never gets committed.
 
-The local Supabase stack provides Postgres + pgvector (needs Docker running).
-Migrations and the config seed are **Prisma-owned**:
+### 3. Start the database and set up its tables
+
+The database runs inside Docker via the Supabase local stack (this gives you Postgres with the `pgvector` search extension). **Docker Desktop must be running first.**
 
 ```bash
-pnpm --filter @tos-rag/db db:start   # supabase start (Docker) → Postgres on :54322
-pnpm --filter @tos-rag/db migrate    # prisma migrate dev — creates the 7 tables + match_chunks RPC
-pnpm --filter @tos-rag/db seed       # prisma db seed — seeds the 15 chunking configs
+pnpm --filter @tos-rag/db db:start   # starts Postgres in Docker on port 54322
+pnpm --filter @tos-rag/db migrate    # creates the tables + the search function
+pnpm --filter @tos-rag/db seed       # inserts the 15 chunking configs
 ```
 
-Verify the configs seeded (expect **15**):
+The first `db:start` downloads Docker images and can take a few minutes. When it finishes it prints connection details — you don't need to copy them; the defaults in your `.env` already match.
+
+**Check it worked** — this should open a browser tab showing a `configs` table with **15 rows**:
 
 ```bash
-pnpm --filter @tos-rag/db studio     # Prisma Studio → configs table
+pnpm --filter @tos-rag/db studio     # Prisma Studio (a database viewer)
 ```
 
-Stop the stack later with `pnpm --filter @tos-rag/db db:stop`.
-
-### 4. Start Ollama and pull Llama
+When you're done for the day, stop the database with:
 
 ```bash
-ollama serve            # or run the Ollama.app; skip if it already runs as a service
-ollama pull llama3.1:8b
+pnpm --filter @tos-rag/db db:stop
 ```
 
-### 5. Ingest a corpus into the database
+### 4. Start Ollama and download the Llama model
 
-The canonical documents (`corpus/canonical/*.md`) are already committed and
-frozen. Chunk + embed + index them. Note the `--` before flags (pnpm needs it to
-pass them through):
+Ollama runs the local AI model that produces the "Llama" answers.
 
 ```bash
-# a single config (fast, good for first run):
+ollama serve            # leave this running; skip if the Ollama.app is already running
+ollama pull llama3.1:8b # downloads the model (~5 GB) — one time
+```
+
+Tip: run `ollama serve` in its own terminal window and leave it open. If you installed the Ollama desktop app, it may already be serving in the background, in which case you can skip `ollama serve`.
+
+### 5. Load a document into the database ("ingest")
+
+The documents live in `corpus/canonical/*.md` and are already committed. **Ingesting** chunks a document into passages, turns each into a searchable vector, and stores them. The first ingest downloads the ~1.2 GB embedder model.
+
+```bash
+# one config — fast, do this for your first run:
 pnpm ingest -- --doc github-tos --strategy sentence --size 256
 
-# the full Phase 1 sweep — 15 chunk+embed passes:
+# OR the full Phase 1 sweep — all 15 configs (much slower):
 pnpm ingest -- --doc github-tos --all-configs
 ```
 
-Available docs: `github-tos`, `netflix-tou`. To validate chunking + embedding
-**without a database or network round-trip to Postgres**, add `--dry-run`
-(writes nothing, needs no DB):
-
-```bash
-pnpm ingest -- --dry-run --doc github-tos --strategy sentence --size 256
-```
+> ℹ️ The `--` before the flags is required — pnpm needs it to pass the flags through to the script. Available documents: `github-tos`, `netflix-tou`.
 
 ### 6. Run the app
 
@@ -122,41 +198,41 @@ pnpm ingest -- --dry-run --doc github-tos --strategy sentence --size 256
 pnpm dev
 ```
 
-- Backend (Hono) → **http://localhost:3000**
-- Frontend (Vite) → **http://localhost:5173** (`/api` is proxied to `:3000`)
+This starts both halves at once:
 
-Open **http://localhost:5173** and ask a question over the ingested corpus.
+- **Backend API** → http://localhost:3000
+- **Web page** → **http://localhost:5173** ← open this one
+
+Open **http://localhost:5173** and ask a question about the document you ingested. To stop the app, press `Ctrl+C` in that terminal.
 
 ---
 
 ## Verifying the setup
 
 ```bash
-pnpm typecheck                        # tsc --noEmit across every workspace
-pnpm test                             # hermetic unit tests (no DB, no model, no network)
-pnpm --filter backend test:live       # non-hermetic: loads the real ~1.2 GB ONNX embedder
+pnpm typecheck                        # type-checks every workspace
+pnpm test                             # fast unit tests (no DB, no model, no network)
+pnpm --filter backend test:live       # slower: loads the real ~1.2 GB embedder
 ```
 
-The hermetic suite runs against fakes, so it passes without Postgres, Ollama, or
-the embedder model — a quick way to confirm the checkout is sound before doing
-the heavier setup above.
+The `pnpm test` suite runs against fakes, so it passes without Postgres, Ollama, or the embedder — the quickest way to confirm the checkout is sound.
 
 ---
 
 ## Common commands
 
 ```bash
-pnpm dev            # backend (:3000) + frontend (:5173) via turbo
-pnpm test           # vitest run across workspaces
-pnpm typecheck      # tsc --noEmit everywhere
+pnpm dev            # backend (:3000) + frontend (:5173) together
+pnpm test           # run all unit tests
+pnpm typecheck      # type-check everything
 pnpm build          # currently only the frontend produces output
 
-pnpm ingest -- --doc <doc> --strategy <s> --size <n>   # chunk + embed + index one config
-pnpm ingest -- --doc <doc> --all-configs               # the 15-config Phase 1 sweep
-pnpm fetch-canonical github-tos                        # refresh a canonical (see PRD §5 freeze protocol)
+pnpm ingest -- --doc <doc> --strategy <s> --size <n>   # load one config into the DB
+pnpm ingest -- --doc <doc> --all-configs               # load all 15 configs
+pnpm fetch-canonical github-tos                        # refresh a source document (see PRD §5)
 ```
 
-Per-workspace scripts run with `pnpm --filter <name> <script>`. Workspaces:
+Any package's own scripts run with `pnpm --filter <name> <script>`. Workspaces:
 `backend`, `frontend`, `@tos-rag/core`, `@tos-rag/shared`, `@tos-rag/ui`,
 `@tos-rag/db`.
 
@@ -166,29 +242,37 @@ Per-workspace scripts run with `pnpm --filter <name> <script>`. Workspaces:
 
 ```
 apps/
-  backend/     Hono API + local ingestion scripts (Node-only; owns the live pipeline)
-  frontend/    React 19 + Vite SPA (hash routing; all network I/O via src/lib/api.ts)
+  backend/     Hono API + local ingestion scripts (owns the live pipeline)
+  frontend/    React 19 + Vite web app (all network I/O via src/lib/api.ts)
 packages/
-  core/        the experiment's logic: chunkers, metrics, prompt, schemas, frozen constants
-  shared/      API contract types + presentation helpers (backend and frontend agree here)
-  ui/          presentational React components (shadcn primitives + hand-rolled visualizations)
-  db/          Prisma schema + migrations + seed, pgvector helpers, local Supabase stack
+  core/        the experiment's logic: chunkers, metrics, prompt, schemas, constants
+  shared/      API types shared by backend and frontend + presentation helpers
+  ui/          presentational React components (shadcn primitives + visualizations)
+  db/          database schema, migrations, seed, search helpers, local Supabase stack
 corpus/
-  canonical/   frozen Markdown documents — every chunk boundary / gold span is a char offset here
+  canonical/   frozen Markdown documents — the source of truth for every passage
   *.pdf        archival snapshots (never parsed by the pipeline)
 docs/          PRD (authoritative), architecture, design
 ```
 
+---
+
 ## Troubleshooting
 
-- **Backend exits immediately at boot** — it requires `DATABASE_URL` and fails
-  fast without it. Confirm `apps/backend/.env` exists and Postgres is up.
-- **`vector(768)` type errors during migrate** — pgvector must be installed; the
-  local Supabase stack handles this. On a hosted Supabase project see
-  `packages/db/supabase/README.md`.
-- **Ask returns 503 for a config** — that `(strategy, size)` hasn't been
-  ingested yet. Run the matching `pnpm ingest -- ...`, or use `--all-configs`.
-- **Opus answers are unavailable** — set `ANTHROPIC_API_KEY` in
-  `apps/backend/.env`. Without it, only the Llama (Ollama) arm is served.
-- **Ollama connection refused** — start it (`ollama serve` / the app) and pull
-  the model (`ollama pull llama3.1:8b`); check `OLLAMA_URL`.
+- **`docker ps` errors / `db:start` fails** — Docker Desktop isn't running. Open
+  it, wait until it reports "running", then retry.
+- **Backend exits immediately at startup** — it requires `DATABASE_URL` and fails
+  fast without it. Confirm `apps/backend/.env` exists and the database is up
+  (step 3).
+- **`vector(768)` type errors during `migrate`** — pgvector isn't available. The
+  local Supabase stack installs it automatically; make sure step 3's `db:start`
+  succeeded. On a hosted Supabase project, see `packages/db/supabase/README.md`.
+- **Asking a question returns a 503** — that `(strategy, size)` config hasn't been
+  ingested yet. Run the matching `pnpm ingest -- ...`, or `--all-configs`.
+- **"Ollama connection refused"** — Ollama isn't running or the model isn't
+  pulled. Run `ollama serve` and `ollama pull llama3.1:8b`, and check `OLLAMA_URL`.
+- **No Opus answers** — set `ANTHROPIC_API_KEY` in `apps/backend/.env`. Without a
+  key, only the Llama (Ollama) answers are served — which is fine for local use.
+- **First ingest/query seems to hang** — it's downloading the ~1.2 GB embedder
+  from Hugging Face. It only happens once; subsequent runs are fast.
+```
