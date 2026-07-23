@@ -137,7 +137,7 @@ Q&A pairs already exist in the two question PDFs; the work is conversion to JSON
 
 | Constant | Value |
 |---|---|
-| Retrieval depth | k = 8 |
+| Retrieval depth | **k = 5** (amended 2026-07-23; was k = 8 — see §15 #11) |
 | Retrieval scope | whole corpus (both documents) per query |
 | Distance | cosine, **exact scan** (no ANN index), tiebreak `ORDER BY embedding <=> q, id` |
 | Chunk overlap | 0 (literature: overlap adds cost without quality gains — Amiri & Bocklitz 2025; Bennani & Moslonka 2025/26) |
@@ -255,7 +255,7 @@ create table runs (
   config_id int not null references configs(id),
   model text not null,               -- '@cf/meta/llama-3.1-8b-instruct-fast' | 'claude-opus-4-8'
   question_id text not null references questions(id),
-  retrieved jsonb not null,          -- [{chunk_id, score, char_start, char_end, doc_id}] (k=8, ordered)
+  retrieved jsonb not null,          -- [{chunk_id, score, char_start, char_end, doc_id}] (k=5, ordered)
   answer text not null,
   retrieval_ms int, generation_ms int,
   input_tokens int, output_tokens int,
@@ -303,7 +303,7 @@ No HNSW/IVFFlat index — exact scan gives perfect recall and deterministic orde
 
 ### 10.1 Character-span retrieval quality (LegalBench-RAG style)
 
-For gold spans G and the k=8 retrieved chunks (**merge overlapping retrieved spans first**, per document):
+For gold spans G and the k=5 retrieved chunks (**merge overlapping retrieved spans first**, per document):
 
 - `char_precision = Σ overlap / Σ retrieved-chars`
 - `char_recall   = Σ overlap / Σ gold-chars`
@@ -366,7 +366,7 @@ TS never computes inferential statistics. A Python script reads per-question sco
 ### Chat (`/`)
 
 - Question input over the fixed corpus (optional doc filter chips: GitHub / Netflix / both).
-- **Pipeline bench** (amendment 2026-07-18): the proposal's three experimental variables are user-selectable per question — chunking strategy (5), chunk size (128/256/512), and generator (Llama / Opus) — defaulting to the winning config + Llama, with a reset-to-winner affordance. Live mode resolves the selection against the `configs` table (a not-yet-ingested config returns a clear 503); Opus requires `ANTHROPIC_API_KEY`. The constants (k=8, embedder, prompt) stay fixed.
+- **Pipeline bench** (amendment 2026-07-18): the proposal's three experimental variables are user-selectable per question — chunking strategy (5), chunk size (128/256/512), and generator (Llama / Opus) — defaulting to the winning config + Llama, with a reset-to-winner affordance. Live mode resolves the selection against the `configs` table (a not-yet-ingested config returns a clear 503); Opus requires `ANTHROPIC_API_KEY`. The constants (k=5, embedder, prompt) stay fixed.
 - Answer rendered with the selected config + generator; abstentions displayed distinctly.
 - **Evidence panel**: the k retrieved chunks with similarity scores, doc + section, and character ranges; clicking highlights the chunk text.
 - Footer states the winning config (strategy × size) so the demo is self-describing.
@@ -417,6 +417,13 @@ All dashboard data comes from `/api/results/*` reading `analysis_results` (+ raw
 | 8 | §9 `match_chunks(config_id, query, k)` | Adds `p_doc_id text default null`, filtered inside the scan | The doc filter previously ran in TypeScript *after* the RPC returned k rows, so a doc-scoped question silently came back with fewer than k chunks, or none. |
 | 9 | §9 schema as written | Adds `create extension vector` and RLS (enabled, no policies) on all 7 tables | The extension is needed on a fresh project. RLS changes nothing operationally — the backend uses the service-role key, which bypasses it — but silences the Supabase "table exposed" advisor. |
 | 10 | §5 GitHub ToS at `Policies/github-terms-of-service.md` | `Policies/github-terms/github-terms-of-service.md` | Upstream moved the file; the flat path is a 404. |
+| 11 | Retrieval depth held constant at **k = 8** | **k = 5** | Owner decision (2026-07-23) to retrieve the top-5 chunks per query. Amends the frozen-constants set (§7); runs collected at k = 8 are not comparable and must be re-collected. |
+
+- **2026-07-23 — Retrieval depth k = 8 → 5.** `RETRIEVAL_K` in `@tos-rag/core`
+  is reduced from 8 to 5 chunks per query (a §7 frozen constant). This changes
+  retrieval for every answer; `runs.retrieved` and all §10.1 char-span metrics are
+  now computed over 5 chunks. Any runs previously stored at k = 8 are invalidated
+  and must be re-collected before they can be compared with new results.
 
 - **2026-07-22 — Cloudflare removed.** The backend runs as a Node process only;
   the Cloudflare Worker deployment path is abandoned. The open generator arm
