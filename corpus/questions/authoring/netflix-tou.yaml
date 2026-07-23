@@ -1,0 +1,174 @@
+# Factual (single clause)
+- id: netflix-q01
+  qtype: factual
+  question: What is the minimum age to create a Netflix account or become an Extra Member?
+  expected_answer: You must be at least 18 years of age, or the age of majority in your province, territory or country.
+  phase1: true
+  gold_quotes:
+    - |
+      You must be at least 18 years of age, or the age of majority in your
+      province, territory or country, to create a Netflix account or, where available, to become an
+      Extra Member.
+
+- id: netflix-q02
+  qtype: factual
+  question: What governing law applies to the Netflix Terms of Use?
+  expected_answer: The Netflix Terms of Use are governed by the laws of the Republic of Singapore.
+  phase1: true
+  gold_quotes:
+    - |
+      These Terms of Use shall be governed by and construed in accordance with
+      the laws of the Republic of Singapore.
+
+- id: netflix-q03
+  qtype: factual
+  question: What is the minimum recommended connection speed for Ultra HD video quality on Netflix?
+  expected_answer: A connection speed of at least 15.0 Mbps per stream is recommended for Ultra HD video quality.
+  phase1: false
+  gold_quotes:
+    - |
+      A connection speed of at least 15.0 Mbps per stream is recommended to receive Ultra HD video
+      quality (defined as a resolution of 4K or higher).
+
+- id: netflix-q04
+  qtype: factual
+  question: How much advance notice does Netflix provide before price changes or subscription plan changes take effect?
+  expected_answer: Netflix will notify you at least one month before any price changes or subscription plan changes become effective.
+  phase1: true
+  gold_quotes:
+    - |
+      We will notify you at least one month before any price changes or changes to your subscription
+      plan will become effective.
+
+- id: netflix-q05
+  qtype: factual
+  question: Where can a user turn off test participation on Netflix?
+  expected_answer: You can turn off test participation at any time by visiting the Account page and changing the Test participation settings.
+  phase1: false
+  gold_quotes:
+    - |
+      You can turn off test participation at any time by visiting the "Account" page and
+      changing the "Test participation" settings.
+
+- id: netflix-q06
+  qtype: factual
+  question: Can Netflix use feedback you send them without compensating you?
+  expected_answer: Yes, Netflix is free to use any feedback you send them worldwide and in perpetuity without further compensation, acknowledgement or payment.
+  phase1: true
+  gold_quotes:
+    - |
+      Netflix is free to use any comments, information, ideas, concepts, reviews, or
+      techniques or any other material contained in any communication you may send to us ("Feedback"),
+      including responses to questionnaires or through postings to the Netflix service, including our
+      websites and user interfaces, worldwide and in perpetuity without further compensation,
+      acknowledgement or payment to you for any purpose whatsoever including developing,
+      manufacturing and marketing products and creating, modifying or improving the Netflix service.
+
+- id: netflix-q07
+  qtype: factual
+  question: When does an Extra Member's access end if they cancel their own account?
+  expected_answer: Cancellation by the Extra Member results in their immediate loss of access to the Netflix service.
+  phase1: false
+  gold_quotes:
+    - |
+      cancellation by the Extra Member will result in the Extra Member's
+      immediate loss of access to the Netflix service.
+
+# Multi-clause / comparison
+- id: netflix-q08
+  qtype: comparison
+  question: How does the end of Extra Member access differ when the Extra Member cancels versus when the Account Owner removes the Extra Member feature?
+  expected_answer: If the Extra Member cancels, their access ends immediately. If the Account Owner removes the Extra Member feature, the Extra Member retains access until the end of the Account Owner's billing period.
+  phase1: true
+  gold_quotes:
+    - |
+      cancellation by the Extra Member will result in the Extra Member's
+      immediate loss of access to the Netflix service.
+    - |
+      If
+      the Account Owner removes the Extra Member feature from their subscription, the Extra Member
+      will retain access to the Netflix service until the end of the Account Owner's billing period.
+
+- id: netflix-q09
+  qtype: multi_clause
+  question: What categories of events beyond Netflix's reasonable control may cause the service or content to be unavailable?
+  expected_answer: The service may be unavailable due to power or server outages, acts or failures by third parties such as network providers, war, riots, strikes, or social unrest, or any other events beyond Netflix's reasonable control.
+  phase1: true
+  gold_quotes:
+    - |
+      events beyond our reasonable control,
+      including: (i) power or server outages; (ii) acts or failures of any kind by third parties such as
+      network providers; (iii) war, riots, strikes, or social unrest; and/or (iv) any other events or factors
+      beyond our reasonable control.
+
+- id: netflix-q10
+  qtype: multi_clause
+  question: What activities are explicitly prohibited in connection with using Netflix to develop or train machine learning tools?
+  expected_answer: Users may not use the Netflix service for the use, creation, development, modification, prompting, fine-tuning, training, testing, benchmarking, or validation of any machine learning tool, model, system, algorithm, product, or other technology, and may not use any automated means, data mining, scraping, or reverse engineering in connection with such activities.
+  phase1: true
+  gold_quotes:
+    - |
+      use any robot, spider, scraper or other automated means to access the Netflix service;
+    - |
+      use any data mining, data gathering or extraction method;
+    - |
+      engage in any of the foregoing in connection with the use, creation, development,
+      modification, prompting, fine-tuning, training, testing, benchmarking or validation of any
+      machine learning tool, model, system, algorithm, product or other technology.
+
+- id: netflix-q11
+  qtype: comparison
+  question: How does Netflix's cancellation policy differ depending on whether you signed up directly versus through a third party?
+  expected_answer: If you signed up directly, you cancel through the Account page and access ends at the end of the billing period. If you signed up through a third party, you may need to cancel through that third party by turning off auto-renew or unsubscribing from the Netflix service there.
+  phase1: false
+  gold_quotes:
+    - |
+      To cancel, go to the
+      "Account" page and follow the instructions for cancellation. The cancellation will take effect at the
+      end of the billing period.
+    - |
+      If you signed up for
+      Netflix using your account with a third party as a Payment Method and wish to cancel your Netflix
+      subscription, you may need to do so through such third party, for example by visiting your account
+      with the applicable third party and turning off auto-renew, or unsubscribing from the Netflix service
+      through that third party.
+
+- id: netflix-q12
+  qtype: multi_clause
+  question: Under what circumstances might subscribers still see advertisements despite having a subscription plan?
+  expected_answer: Subscribers may see advertisements during certain live or special events including replays, as part of linear programming, or where required by streaming rights or other legal or contractual obligations.
+  phase1: true
+  gold_quotes:
+    - |
+      there may be some occasions when you
+      may see advertisements — for example, during certain live or special events (including replays), as
+      part of linear programming, or where required by streaming rights or other legal or contractual
+      obligations.
+
+- id: netflix-q13
+  qtype: multi_clause
+  question: What conditions govern where an Extra Member can activate their account, and who pays for it?
+  expected_answer: Extra Members may only activate their account in the country where the Account Owner created their account, and the subscription fees are charged to the Account Owner's Payment Method.
+  phase1: false
+  gold_quotes:
+    - |
+      The subscription fees related to the Extra Member account will be charged to the
+      Account Owner's Payment Method.
+    - |
+      Extra Members may activate their Extra Member account only in
+      the country where the Account Owner created their account.
+
+# Unanswerable
+- id: netflix-q14
+  qtype: unanswerable
+  question: What specific subscription plans and prices does Netflix currently offer?
+  expected_answer: I don't know
+  phase1: true
+  gold_quotes: []
+
+- id: netflix-q15
+  qtype: unanswerable
+  question: Does Netflix share user viewing data with third-party advertisers?
+  expected_answer: I don't know
+  phase1: true
+  gold_quotes: []
