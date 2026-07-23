@@ -8,7 +8,7 @@
  * takes a long time, so it has to be asked for explicitly.
  *
  * Idempotent — rows for a (config, doc) pair are replaced, not appended, so a
- * re-run cannot silently double the corpus and fill k=8 with near-duplicates.
+ * re-run cannot silently double the corpus and fill the k results with near-duplicates.
  */
 import "dotenv/config";
 import { insertChunks, prisma, resolveConfigId } from "@tos-rag/db";
