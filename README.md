@@ -11,7 +11,7 @@ A controlled experiment on **RAG pipeline design over Terms-of-Service documents
 
 ---
 
-## What you're setting up (in plain English)
+## What you're setting up
 
 The app answers questions about legal Terms-of-Service documents by (1) finding the most relevant passages in a document, then (2) asking a language model to answer using only those passages. To do that on your machine you need four things running:
 
@@ -89,24 +89,6 @@ pnpm dev
 ```
 
 Then open **http://localhost:5173** and ask a question about the GitHub Terms of Service.
-
----
-
-## Just want to see it work? (no database, no downloads)
-
-To confirm your checkout is sound before doing the full setup, run the hermetic tests — they use fakes, so they need no database, no Ollama, and no model download:
-
-```bash
-pnpm install
-pnpm test        # unit tests across all packages
-pnpm typecheck   # type-checks every workspace
-```
-
-If those pass, the code is healthy and you can proceed to the full setup with confidence. You can also validate chunking + embedding with `--dry-run` (writes nothing, needs no database):
-
-```bash
-pnpm ingest -- --dry-run --doc github-tos --strategy sentence --size 256
-```
 
 ---
 
