@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ChevronDown, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import {
   ask,
   type AskResponse,
@@ -19,12 +19,8 @@ import {
   Badge,
   Button,
   Card,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
   EvidenceCard,
   Input,
-  Separator,
   Skeleton,
   Spinner,
   ToggleGroup,
@@ -119,133 +115,129 @@ export function AskView() {
         </p>
       </section>
 
-      <Card className="my-8 gap-4 p-4">
-        <form onSubmit={onSubmit} className="contents">
-          <div className="flex gap-3">
-            <Input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="e.g. How much notice before a fee change?"
-              aria-label="Your question"
-              className="bg-background h-10 flex-1 text-base"
-            />
-            <Button type="submit" size="lg" disabled={pending}>
-              {pending && <Spinner aria-hidden="true" role={undefined} />}
-              {pending ? "Asking" : "Ask"}
+      <Card className="bg-background mt-8 p-2.5">
+        <form onSubmit={onSubmit} className="flex gap-2.5">
+          <Input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="e.g. How much notice before a fee change?"
+            aria-label="Your question"
+            className="bg-background h-11 flex-1 text-base"
+          />
+          <Button type="submit" size="lg" disabled={pending} className="px-6">
+            {pending && <Spinner aria-hidden="true" role={undefined} />}
+            {pending ? "Asking" : "Ask"}
+          </Button>
+        </form>
+      </Card>
+
+      {/* the pipeline settings — a full-width horizontal band under the ask
+          box, read left to right: search in X, chunk by Y at size Z, answer
+          with W. */}
+      <Card
+        aria-label="Pipeline configuration"
+        className="bg-card mt-4 gap-0 p-5 sm:px-6"
+      >
+        <div className="border-border mb-5 flex items-center justify-between gap-3 border-b pb-4">
+          <span className="text-muted-foreground text-[11px] font-bold uppercase tracking-[0.14em]">
+            Pipeline
+          </span>
+          {isWinner ? (
+            <span className="text-ink-soft flex items-center gap-2 font-mono text-[11px]">
+              <span
+                className="bg-primary size-1.5 rotate-45 rounded-[1px]"
+                aria-hidden="true"
+              />
+              winning config
+            </span>
+          ) : (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="text-ink-soft hover:text-foreground h-auto p-0 font-mono text-[11.5px]"
+              onClick={() => {
+                setStrategy(WINNER.strategy);
+                setChunkSize(WINNER.chunkSize);
+                setModel("llama");
+              }}
+            >
+              <RotateCcw className="size-3" aria-hidden="true" />
+              reset to winner
             </Button>
-          </div>
+          )}
+        </div>
 
-          <Separator />
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* one stage per row — label on the left, its options on the right */}
+        <div className="flex flex-col gap-5">
+          <PipelineStage label="Search in">
             <ToggleGroup
               type="single"
               value={docValue}
               onValueChange={(v) => v && setDocValue(v)}
               aria-label="Limit to a document"
-              className="flex-wrap gap-1.5"
+              className="flex flex-wrap gap-1.5"
             >
               {DOC_OPTIONS.map((opt) => (
-                <ToggleGroupItem
-                  key={opt.value}
-                  value={opt.value}
-                  className={cn(
-                    "border-border h-auto rounded-full border px-3.5 py-1.5 text-[13px]",
-                    CHIP_ON,
-                  )}
-                >
+                <BenchChip key={opt.value} value={opt.value}>
                   {opt.label}
-                </ToggleGroupItem>
+                </BenchChip>
               ))}
             </ToggleGroup>
+          </PipelineStage>
 
-            {/* the three experimental variables, collapsed to one line */}
-            <Collapsible className="min-w-60 flex-1">
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground ml-auto flex font-mono text-xs font-normal"
-                >
-                  pipeline
-                  <span className="text-ink-soft">
-                    {strategy} × {chunkSize} · {MODEL_LABELS[model]}
-                  </span>
-                  <ChevronDown className="size-3.5" aria-hidden="true" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 flex flex-col gap-2">
-                <BenchRow label="strategy">
-                  <ToggleGroup
-                    type="single"
-                    value={strategy}
-                    onValueChange={(v) => v && setStrategy(v)}
-                    aria-label="Chunking strategy"
-                    className="flex-wrap gap-1.5"
-                  >
-                    {STRATEGIES.map((s) => (
-                      <BenchChip key={s} value={s}>
-                        {s}
-                      </BenchChip>
-                    ))}
-                  </ToggleGroup>
-                </BenchRow>
+          <PipelineStage label="Chunk by" node="cut">
+            <ToggleGroup
+              type="single"
+              value={strategy}
+              onValueChange={(v) => v && setStrategy(v)}
+              aria-label="Chunking strategy"
+              className="flex flex-wrap gap-1.5"
+            >
+              {STRATEGIES.map((s) => (
+                <BenchChip key={s} value={s}>
+                  {s}
+                </BenchChip>
+              ))}
+            </ToggleGroup>
+          </PipelineStage>
 
-                <BenchRow label="size">
-                  <ToggleGroup
-                    type="single"
-                    value={String(chunkSize)}
-                    onValueChange={(v) => v && setChunkSize(Number(v))}
-                    aria-label="Chunk size in tokens"
-                    className="flex-wrap gap-1.5"
-                  >
-                    {SIZES.map((s) => (
-                      <BenchChip key={s} value={String(s)}>
-                        {s} tok
-                      </BenchChip>
-                    ))}
-                  </ToggleGroup>
-                </BenchRow>
+          <PipelineStage label="At size">
+            <ToggleGroup
+              type="single"
+              value={String(chunkSize)}
+              onValueChange={(v) => v && setChunkSize(Number(v))}
+              aria-label="Chunk size in tokens"
+              className="flex flex-wrap gap-1.5"
+            >
+              {SIZES.map((s) => (
+                <BenchChip key={s} value={String(s)}>
+                  {s} tok
+                </BenchChip>
+              ))}
+            </ToggleGroup>
+          </PipelineStage>
 
-                <BenchRow label="generator">
-                  <ToggleGroup
-                    type="single"
-                    value={model}
-                    onValueChange={(v) => v && setModel(v as GeneratorModel)}
-                    aria-label="Generator model"
-                    className="flex-wrap gap-1.5"
-                  >
-                    {MODELS.map((m) => (
-                      <BenchChip key={m.value} value={m.value}>
-                        {m.label}
-                      </BenchChip>
-                    ))}
-                  </ToggleGroup>
-                  {!isWinner && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      className="text-ink-soft h-auto p-0 font-mono text-[11.5px]"
-                      onClick={() => {
-                        setStrategy(WINNER.strategy);
-                        setChunkSize(WINNER.chunkSize);
-                        setModel("llama");
-                      }}
-                    >
-                      <RotateCcw className="size-3" aria-hidden="true" />
-                      reset to winning config
-                    </Button>
-                  )}
-                </BenchRow>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </form>
+          <PipelineStage label="Answer with">
+            <ToggleGroup
+              type="single"
+              value={model}
+              onValueChange={(v) => v && setModel(v as GeneratorModel)}
+              aria-label="Generator model"
+              className="flex flex-wrap gap-1.5"
+            >
+              {MODELS.map((m) => (
+                <BenchChip key={m.value} value={m.value}>
+                  {m.label}
+                </BenchChip>
+              ))}
+            </ToggleGroup>
+          </PipelineStage>
+        </div>
       </Card>
 
       {!pending && (
-        <div className="mb-8 flex flex-wrap items-baseline gap-2">
+        <div className="mt-8 flex flex-wrap items-baseline gap-2">
           <span className="text-muted-foreground text-[11px] font-bold uppercase tracking-[0.12em]">
             {result ? "ask another" : "try"}
           </span>
@@ -268,138 +260,177 @@ export function AskView() {
       )}
 
       {(pending || error || result) && (
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <section aria-label="Answer" className="min-h-45">
-            {pending && (
-              <div role="status" aria-label="Retrieving clauses and generating">
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="mt-4 h-4 w-full" />
-                <Skeleton className="mt-2 h-4 w-11/12" />
-                <Skeleton className="mt-2 h-4 w-4/5" />
-              </div>
-            )}
-
-            {/* The live region is mounted before the error exists, so screen
-                readers announce the failure when it swaps in; a role="alert"
-                inserted into the DOM is not reliably announced. Alert's own
-                role is dropped so the region is the only announcer. */}
-            <div role="alert">
-              {error && (
-                <Alert variant="destructive" role={undefined}>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+        <section aria-label="Answer" className="mt-8 min-h-45">
+          {pending && (
+            <div role="status" aria-label="Retrieving clauses and generating">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="mt-4 h-4 w-full" />
+              <Skeleton className="mt-2 h-4 w-11/12" />
+              <Skeleton className="mt-2 h-4 w-4/5" />
             </div>
+          )}
 
-            {!pending && !error && result && parsed && (
-              <div>
-                <p className="text-ink-soft mb-4 text-[17px] font-semibold">
-                  <span className="text-muted-foreground mr-2.5 font-mono">
-                    Q.
-                  </span>
-                  {askedQuestion}
-                </p>
+          {/* The live region is mounted before the error exists, so screen
+              readers announce the failure when it swaps in; a role="alert"
+              inserted into the DOM is not reliably announced. Alert's own
+              role is dropped so the region is the only announcer. */}
+          <div role="alert">
+            {error && (
+              <Alert variant="destructive" role={undefined}>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+          </div>
 
-                {result.abstained ? (
-                  <div className="border-rule-strong bg-card text-ink-soft max-w-[68ch] rounded-lg border border-dashed p-4.5">
-                    <Badge
-                      variant="outline"
-                      className="border-destructive text-destructive mb-2.5 mr-2.5 font-mono text-[11px] uppercase tracking-[0.14em]"
-                    >
-                      No answer in corpus
-                    </Badge>
-                    The corpus doesn't answer this, so the model declined rather
-                    than guess. Its reply, verbatim:{" "}
-                    <span className="text-foreground font-mono text-sm">
-                      {result.answer}
-                    </span>
-                  </div>
-                ) : (
-                  <p className="max-w-[68ch] text-[18px] leading-[1.7]">
-                    <span className="text-muted-foreground mr-2.5 font-mono text-[17px]">
-                      A.
-                    </span>
-                    {parsed.segments.map((seg, i) =>
-                      seg.kind === "text" ? (
-                        <span key={i}>{seg.value}</span>
-                      ) : (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => flash(seg.value)}
-                          aria-label={`Show evidence ${seg.value}`}
-                          className="bg-compare-wash text-compare border-compare hover:bg-compare hover:text-background focus-visible:ring-ring/50 mx-0.5 inline-block rounded-[3px] border px-[5px] py-0.5 align-super font-mono text-[11px] leading-none transition-colors focus-visible:ring-[3px]"
-                        >
-                          {seg.value}
-                        </button>
-                      ),
-                    )}
-                  </p>
-                )}
+          {!pending && !error && result && parsed && (
+            <div>
+              {/* scannable status line — model, config and cost read at a
+                  glance before the prose. */}
+              <div className="border-border text-ink-soft mb-5 flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b pb-3 font-mono text-[12.5px]">
+                <span className="text-muted-foreground font-bold uppercase tracking-[0.14em]">
+                  Answer
+                </span>
+                <span className="text-rule-strong" aria-hidden="true">
+                  ·
+                </span>
+                <span className="text-foreground">
+                  {MODEL_LABELS[result.model] ?? result.model}
+                </span>
+                <span className="text-rule-strong" aria-hidden="true">
+                  ·
+                </span>
+                <span>
+                  {result.config.strategy} × {result.config.chunkSize}
+                </span>
+                <span className="text-rule-strong" aria-hidden="true">
+                  ·
+                </span>
+                <span>
+                  {formatMs(
+                    result.timings.retrievalMs + result.timings.generationMs,
+                  )}
+                </span>
+                <span className="text-rule-strong" aria-hidden="true">
+                  ·
+                </span>
+                <span>{result.evidence.length} clauses</span>
+              </div>
 
-                <div className="text-muted-foreground mt-4.5 flex flex-wrap font-mono text-xs [&>span+span]:before:text-rule-strong [&>span+span]:before:mx-2.5 [&>span+span]:before:content-['·']">
-                  <span>
-                    config {result.config.strategy} × {result.config.chunkSize}
-                  </span>
-                  <span>{MODEL_LABELS[result.model] ?? result.model}</span>
-                  <span>retrieval {formatMs(result.timings.retrievalMs)}</span>
-                  <span>
-                    generation {formatMs(result.timings.generationMs)}
-                  </span>
-                  <span>
-                    {result.tokens.input} in · {result.tokens.output} out tokens
+              <p className="text-ink-soft mb-4 text-[16px] font-medium leading-snug">
+                <span className="text-muted-foreground mr-2.5 font-mono text-[13px]">
+                  Q
+                </span>
+                {askedQuestion}
+              </p>
+
+              {result.abstained ? (
+                <div className="border-rule-strong bg-card text-ink-soft max-w-[68ch] rounded-lg border border-dashed p-4.5">
+                  <Badge
+                    variant="outline"
+                    className="border-destructive text-destructive mb-2.5 mr-2.5 font-mono text-[11px] uppercase tracking-[0.14em]"
+                  >
+                    No answer in corpus
+                  </Badge>
+                  The corpus doesn't answer this, so the model declined rather
+                  than guess. Its reply, verbatim:{" "}
+                  <span className="text-foreground font-mono text-sm">
+                    {result.answer}
                   </span>
                 </div>
-              </div>
-            )}
-          </section>
-
-          <aside aria-label="Evidence">
-            <h2 className="text-ink-soft mb-4 flex items-baseline justify-between gap-3 text-[11.5px] font-bold uppercase tracking-[0.12em]">
-              Retrieved
-              {result && result.evidence.length > 0 && (
-                <span className="text-muted-foreground font-mono text-[11.5px] font-normal normal-case tracking-normal">
-                  k = {result.evidence.length}
-                </span>
+              ) : (
+                <p className="text-foreground max-w-[68ch] text-[18.5px] leading-[1.75]">
+                  <span className="text-muted-foreground mr-2.5 font-mono text-[16px]">
+                    A
+                  </span>
+                  {parsed.segments.map((seg, i) =>
+                    seg.kind === "text" ? (
+                      <span key={i}>{seg.value}</span>
+                    ) : (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => flash(seg.value)}
+                        aria-label={`Show evidence ${seg.value}`}
+                        className="bg-compare-wash text-compare border-compare hover:bg-compare hover:text-background focus-visible:ring-ring/50 mx-0.5 inline-block rounded-[3px] border px-[5px] py-0.5 align-super font-mono text-[11px] leading-none transition-colors focus-visible:ring-[3px]"
+                      >
+                        {seg.value}
+                      </button>
+                    ),
+                  )}
+                </p>
               )}
-            </h2>
-            {result && result.evidence.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {result.evidence.map((ev, i) => (
-                  <EvidenceCard
-                    key={`${ev.docId}-${ev.charStart}`}
-                    index={i + 1}
-                    evidence={ev}
-                    cited={parsed?.citedIds.includes(i + 1) ?? false}
-                    flashed={flashed === i + 1}
-                  />
-                ))}
+
+              <div className="text-muted-foreground mt-5 flex flex-wrap font-mono text-[12px] [&>span+span]:before:text-rule-strong [&>span+span]:before:mx-2.5 [&>span+span]:before:content-['·']">
+                <span>retrieval {formatMs(result.timings.retrievalMs)}</span>
+                <span>
+                  generation {formatMs(result.timings.generationMs)}
+                </span>
+                <span>
+                  {result.tokens.input} in · {result.tokens.output} out tokens
+                </span>
               </div>
-            ) : (
-              <p className="border-border text-muted-foreground border-l-2 py-1 pl-3.5 text-sm">
-                Ask a question to see the chunks it retrieved, each with the
-                character span it was cut from.
-              </p>
-            )}
-          </aside>
-        </div>
+
+              {result.evidence.length > 0 && (
+                <div className="mt-10">
+                  <h2 className="text-ink-soft mb-4 flex items-baseline gap-2.5 text-[11.5px] font-bold uppercase tracking-[0.12em]">
+                    Retrieved
+                    <span className="text-muted-foreground font-mono text-[11.5px] font-normal normal-case tracking-normal">
+                      k = {result.evidence.length}
+                    </span>
+                  </h2>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {result.evidence.map((ev, i) => (
+                      <EvidenceCard
+                        key={`${ev.docId}-${ev.charStart}`}
+                        index={i + 1}
+                        evidence={ev}
+                        cited={parsed?.citedIds.includes(i + 1) ?? false}
+                        flashed={flashed === i + 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
       )}
     </>
   );
 }
 
-function BenchRow({
+/**
+ * One stage of the pipeline as a row: a marker and verb-phrase label on the
+ * left, the stage's chips on the right. The "cut" marker places the app's
+ * cut-mark signature on the chunking stage — where the pipeline actually cuts
+ * the document.
+ */
+function PipelineStage({
   label,
+  node = "station",
   children,
 }: {
   label: string;
+  node?: "station" | "cut";
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-muted-foreground w-21 shrink-0 text-[11px] font-bold uppercase tracking-[0.12em]">
-        {label}
-      </span>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex items-center gap-2.5 sm:w-36 sm:shrink-0">
+        <span
+          className="flex w-3.5 shrink-0 justify-center"
+          aria-hidden="true"
+        >
+          {node === "cut" ? (
+            <span className="cut-mark-rule block w-3.5" />
+          ) : (
+            <span className="bg-primary size-2 rotate-45 rounded-[1px]" />
+          )}
+        </span>
+        <span className="text-ink-soft text-[11px] font-bold uppercase tracking-[0.14em]">
+          {label}
+        </span>
+      </div>
       {children}
     </div>
   );
@@ -416,7 +447,7 @@ function BenchChip({
     <ToggleGroupItem
       value={value}
       className={cn(
-        "border-border h-auto rounded border px-2.5 py-1 font-mono text-xs",
+        "border-border bg-background text-ink-soft hover:bg-accent hover:text-foreground h-auto rounded-md border px-3 py-1.5 font-mono text-[13px] transition-colors",
         CHIP_ON,
       )}
     >

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource-variable/cause": "^5.2.1",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@tos-rag/shared": "workspace:*",

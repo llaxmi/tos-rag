@@ -40,9 +40,9 @@ export function EvidenceCard({ index, evidence, cited, flashed }: Props) {
         <span>{DOC_LABELS[evidence.docId] ?? evidence.docId}</span>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="text-ink-soft ml-auto inline-flex cursor-default items-center gap-1.5">
+            <span className="text-ink-soft ml-auto inline-flex cursor-default items-center gap-2">
               <span
-                className="bg-border h-1 w-9 overflow-hidden rounded-full"
+                className="bg-border h-1.5 w-14 overflow-hidden rounded-full"
                 aria-hidden="true"
               >
                 <span
@@ -50,7 +50,7 @@ export function EvidenceCard({ index, evidence, cited, flashed }: Props) {
                   style={{ width: `${pct}%` }}
                 />
               </span>
-              sim {evidence.score.toFixed(2)}
+              <span className="text-foreground tabular-nums">{pct}%</span>
             </span>
           </TooltipTrigger>
           <TooltipContent>
@@ -64,7 +64,7 @@ export function EvidenceCard({ index, evidence, cited, flashed }: Props) {
         className="mt-2.5"
       />
       {/* verbatim source text — mono says "these words are the document's" */}
-      <p className="text-ink-soft mt-3 font-mono text-[13px] leading-[1.55]">
+      <p className="text-ink-soft mt-3 font-mono text-[13.5px] leading-[1.6]">
         {evidence.text}
       </p>
     </Card>
