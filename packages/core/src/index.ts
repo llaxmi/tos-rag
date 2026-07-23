@@ -17,6 +17,17 @@ export {
 } from "./metrics/charspan";
 export { ABSTENTION_TEXT, buildRagPrompt, isAbstention } from "./prompts";
 export {
+  buildCragPrompt,
+  parseCragVerdict,
+  type CragVerdict,
+} from "./eval/crag";
+export {
+  evaluateRun,
+  type EvalScores,
+  type EvaluateInput,
+  type Judge,
+} from "./eval/evaluate";
+export {
   buildQuestionRecords,
   resolveQuoteSpan,
   QuoteResolutionError,
