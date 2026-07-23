@@ -17,6 +17,13 @@ export {
 } from "./metrics/charspan";
 export { ABSTENTION_TEXT, buildRagPrompt, isAbstention } from "./prompts";
 export {
+  buildQuestionRecords,
+  resolveQuoteSpan,
+  QuoteResolutionError,
+  type AuthoringEntry,
+  type ResolvedSpan,
+} from "./questions/resolve";
+export {
   CHUNK_SIZES,
   EMBED_BATCH_MAX,
   EMBED_DIMS,
