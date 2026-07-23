@@ -1,0 +1,183 @@
+# Factual (single clause)
+- id: github-q01
+  qtype: factual
+  question: What is the minimum age to create a GitHub account?
+  expected_answer: You must be at least 13 years of age to create a GitHub account.
+  phase1: true
+  gold_quotes:
+    - |
+      You must be age 13 or older. While we are thrilled to see brilliant young coders get excited
+      by learning to program, we must comply with United States law. GitHub does not target our
+      Service to children under 13, and we do not permit any Users under 13 on our Service.
+
+- id: github-q02
+  qtype: factual
+  question: How many free accounts can one person maintain on GitHub?
+  expected_answer: One person may maintain no more than one free Account, plus optionally one free machine account.
+  phase1: true
+  gold_quotes:
+    - |
+      One person or legal entity may maintain no more than one free Account (if you choose to
+      control a machine account as well, that's fine, but it can only be used for running a
+      machine).
+
+- id: github-q03
+  qtype: factual
+  question: Within how many days after account cancellation must you request a copy of your content?
+  expected_answer: You must make the request within 90 days of cancellation, termination, or downgrade.
+  phase1: false
+  gold_quotes:
+    - |
+      You must make this request within 90 days of cancellation, termination, or downgrade.
+
+- id: github-q04
+  qtype: factual
+  question: How much advance notice does GitHub give users before material changes to the Terms of Service take effect?
+  expected_answer: GitHub provides at least 30 days' notice before material changes take effect.
+  phase1: true
+  gold_quotes:
+    - |
+      We will notify our Users of material changes to this Agreement, such as price increases, at least 30 days prior to
+      the change taking effect by posting a notice on our Website or sending email to the primary
+      email address specified in your GitHub account.
+
+- id: github-q05
+  qtype: factual
+  question: What governing law applies to the GitHub Terms of Service agreement?
+  expected_answer: The agreement is governed by the federal laws of the United States and the laws of the State of California.
+  phase1: false
+  gold_quotes:
+    - |
+      this Agreement between you and
+      GitHub and any access to or use of the Website or the Service are governed by the federal laws
+      of the United States of America and the laws of the State of California, without regard to
+      conflict of law provisions.
+
+- id: github-q06
+  qtype: factual
+  question: Does GitHub claim ownership of AI feature inputs or outputs?
+  expected_answer: No, GitHub does not claim ownership of your Input or Output.
+  phase1: true
+  gold_quotes:
+    - |
+      GitHub does not claim ownership of your Input or Output.
+
+- id: github-q07
+  qtype: factual
+  question: What email address can copyright owners use to report DMCA violations on GitHub?
+  expected_answer: Copyright owners can email copyright@github.com to report violations.
+  phase1: false
+  gold_quotes:
+    - |
+      If you are a copyright owner and
+      you believe that content on GitHub violates your rights, please contact us via our convenient
+      DMCA form or by emailing copyright@github.com.
+
+# Multi-clause / comparison
+- id: github-q08
+  qtype: multi_clause
+  question: What are the conditions under which GitHub personnel may access private repository content without consent?
+  expected_answer: GitHub may access private repositories for security purposes, to scan for vulnerabilities or policy violations, to assist with support, to maintain service integrity, or to comply with legal obligations.
+  phase1: true
+  gold_quotes:
+    - |
+      for security purposes;
+    - |
+      for automated scanning or manual review for known vulnerabilities, active malware, or
+      other content known to violate our Terms of Service;
+    - |
+      to assist the repository owner with a support matter;
+    - |
+      to maintain the integrity of the Service; or
+    - |
+      to comply with our legal obligations if we have reason to believe the contents are in
+      violation of the law.
+
+- id: github-q09
+  qtype: multi_clause
+  question: What rights does GitHub receive over user-generated content posted to public repositories, and what is excluded from those rights?
+  expected_answer: GitHub receives a broad license to store, host, archive, parse, display, copy, and use content including for AI training, but this license does not extend to content stored in repositories that are not provided as input to an AI Feature.
+  phase1: true
+  gold_quotes:
+    - |
+      You grant GitHub and our Affiliates the right to store, host, archive, parse, display, and make
+      copies of Your Content as necessary to provide, develop, and improve the Service, including by
+      training AI Features, and for the purpose of training, developing, and improving artificial
+      intelligence and machine learning models and technologies of our Affiliates.
+    - |
+      This license does not extend to Your Content
+      stored in repositories that are not provided as Input to an AI Feature.
+
+- id: github-q10
+  qtype: comparison
+  question: How does opting out of AI training affect GitHub's use of inputs and outputs versus content stored in public repositories?
+  expected_answer: Opting out stops GitHub from collecting inputs and outputs for AI training going forward, but does not affect the license GitHub holds over content stored in public repositories, which is unaffected by the opt-out.
+  phase1: true
+  gold_quotes:
+    - |
+      If you opt out,
+      GitHub will not collect or use your Inputs and Outputs for the purposes described in this
+      paragraph from the effective date of your opt-out going forward.
+    - |
+      The opt-out right described in this section applies solely to the use of your Inputs and Outputs
+      as described in this section, and does not apply to the license granted in Sections D.4-D.8 or to
+      any Content that does not constitute Input or Output (including Content stored in public
+      repositories).
+
+- id: github-q11
+  qtype: comparison
+  question: How does GitHub's handling of repository content differ between private and public repositories with respect to AI training?
+  expected_answer: Private repository content is not used for AI development or improvement unless you explicitly provide it as input to an AI Feature, while public repository content is covered by a broad license that includes AI training use.
+  phase1: false
+  gold_quotes:
+    - |
+      If you provide your private repository content as Input to AI Features, we may use that Input
+      to provide, develop, train, and improve the Service, including AI Features. Your ability to opt
+      out under Section J.3 applies to this use of private repository content. We will not otherwise
+      use your private repository contents to develop or improve the Service.
+    - |
+      You grant GitHub and our Affiliates the right to store, host, archive, parse, display, and make
+      copies of Your Content as necessary to provide, develop, and improve the Service, including by
+      training AI Features, and for the purpose of training, developing, and improving artificial
+      intelligence and machine learning models and technologies of our Affiliates.
+
+- id: github-q12
+  qtype: multi_clause
+  question: What happens to a user's content and profile when their GitHub account is cancelled or terminated?
+  expected_answer: GitHub will delete the user's full profile and repository contents within 90 days, though encrypted backups may remain. Content contributed to other users' repositories or that others have forked will not be deleted, and the information cannot be recovered once the account is cancelled.
+  phase1: true
+  gold_quotes:
+    - |
+      we will delete
+      your full profile and the Content of your repositories within 90 days of cancellation or
+      termination (though some information may remain in encrypted backups). This information
+      cannot be recovered once your Account is canceled.
+    - |
+      We will not delete Content that you have contributed to other Users' repositories or that other
+      Users have forked.
+
+- id: github-q13
+  qtype: multi_clause
+  question: What are the conditions under which the Access Reciprocity clause in Section D.9 does not apply?
+  expected_answer: Section D.9 does not apply if the access is solely for academic research, or if the accessing party's products or services had fewer than 700 million monthly active users in the preceding calendar month.
+  phase1: false
+  gold_quotes:
+    - |
+      This Section D.9 does not apply to Access solely for the purpose of academic research or if, on
+      the date you Access the Content, the number of monthly active users of the products or services
+      made available by you is less than 700 million in the preceding calendar month.
+
+# Unanswerable
+- id: github-q14
+  qtype: unanswerable
+  question: What is the specific dollar amount GitHub charges for its paid plans?
+  expected_answer: I don't know
+  phase1: true
+  gold_quotes: []
+
+- id: github-q15
+  qtype: unanswerable
+  question: Does GitHub share user data with government agencies for surveillance purposes?
+  expected_answer: I don't know
+  phase1: true
+  gold_quotes: []
