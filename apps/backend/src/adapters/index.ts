@@ -10,6 +10,7 @@ export {
   sha256,
   type CanonicalDoc,
 } from "./canonical";
+export { createJudge, type JudgeEnv } from "./judge";
 
 export interface EmbedderEnv {
   EMBEDDER?: string;
