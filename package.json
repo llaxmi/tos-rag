@@ -8,6 +8,7 @@
     "typecheck": "turbo run typecheck",
     "build": "turbo run build",
     "ingest": "pnpm --filter backend ingest",
+    "build-questions": "pnpm --filter backend build-questions",
     "fetch-canonical": "pnpm --filter backend fetch-canonical"
   },
   "devDependencies": {
