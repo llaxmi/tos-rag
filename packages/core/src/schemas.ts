@@ -32,7 +32,7 @@ export type QuestionRecord = z.infer<typeof QuestionRecordSchema>;
 
 /** Experiment constants (PRD §7). */
 export const CHUNK_SIZES = [128, 256, 512] as const;
-export const RETRIEVAL_K = 8;
+export const RETRIEVAL_K = 5;
 export const GENERATION_SEED = 42;
 export const GENERATION_MAX_TOKENS = 1024;
 
