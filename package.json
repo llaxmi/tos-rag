@@ -9,6 +9,7 @@
     "build": "turbo run build",
     "ingest": "pnpm --filter backend ingest",
     "build-questions": "pnpm --filter backend build-questions",
+    "seed-questions": "pnpm --filter backend seed-questions",
     "fetch-canonical": "pnpm --filter backend fetch-canonical"
   },
   "devDependencies": {
