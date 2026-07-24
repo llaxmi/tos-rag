@@ -8,4 +8,9 @@ export {
   type ChunkRow,
 } from "./vector";
 export { upsertDocument, type DocumentRow } from "./documents";
-export { upsertQuestions } from "./questions";
+export { upsertQuestions, getQuestions, type QuestionRow } from "./questions";
+export {
+  getCompletedRunKeys,
+  writeRun,
+  type RunInsert,
+} from "./runs";

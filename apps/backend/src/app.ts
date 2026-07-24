@@ -6,18 +6,15 @@ import {
   CHUNK_SIZES,
   isAbstention,
   STRATEGIES,
+  type GenerationResult,
+  type GeneratorModel,
   type RetrievedChunk,
   type Strategy,
 } from "@tos-rag/core";
 
-export interface GenerationResult {
-  answer: string;
-  inputTokens: number;
-  outputTokens: number;
-  latencyMs: number;
-}
-
-export type GeneratorModel = "llama" | "opus";
+// Generator types are owned by @tos-rag/core (PRD §8.6); re-exported here so
+// existing importers (deps/live.ts) keep resolving them from the app module.
+export type { GenerationResult, GeneratorModel } from "@tos-rag/core";
 
 export interface RetrieveOptions {
   docId?: string;
