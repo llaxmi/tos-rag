@@ -57,7 +57,10 @@ export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
       body: JSON.stringify({
         model: MODEL_IDS.opus,
         max_tokens: GENERATION_MAX_TOKENS,
-        temperature: 0,
+        // Opus 4.8 removed `temperature` (400 if sent). Thinking disabled so the
+        // paid arm answers directly from context — a fair comparison to the
+        // open (Llama) generator, which does no extended reasoning.
+        thinking: { type: "disabled" },
         messages: [{ role: "user", content: prompt }],
       }),
     });
