@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "ingest": "tsx src/scripts/ingest.ts",
     "build-questions": "tsx src/scripts/build-questions.ts",
+    "seed-questions": "tsx src/scripts/seed-questions.ts",
     "fetch-canonical": "tsx src/scripts/fetch-canonical.ts"
   },
   "keywords": [],
