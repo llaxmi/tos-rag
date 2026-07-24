@@ -34,6 +34,7 @@ export {
   type AuthoringEntry,
   type ResolvedSpan,
 } from "./questions/resolve";
+export { parseQuestionsJsonl } from "./questions/jsonl";
 export {
   CHUNK_SIZES,
   EMBED_BATCH_MAX,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildQuestionRecords,
+  parseQuestionsJsonl,
   QuoteResolutionError,
   resolveQuoteSpan,
   type AuthoringEntry,
@@ -133,5 +134,49 @@ describe("buildQuestionRecords", () => {
     expect(() => buildQuestionRecords("netflix-tou", canon, [bad])).toThrowError(
       /invalid qtype/i,
     );
+  });
+});
+
+describe("parseQuestionsJsonl", () => {
+  const line = (o: Record<string, unknown>) => JSON.stringify(o);
+  const answerable = {
+    id: "github-q01",
+    doc_id: "github-tos",
+    qtype: "factual",
+    question: "Q?",
+    expected_answer: "A.",
+    gold_spans: [{ char_start: 10, char_end: 20 }],
+    phase1: true,
+  };
+  const unanswerable = {
+    id: "github-q02",
+    doc_id: "github-tos",
+    qtype: "unanswerable",
+    question: "Q?",
+    expected_answer: "I don't know",
+    gold_spans: [],
+    phase1: false,
+  };
+
+  it("parses valid records and ignores blank lines", () => {
+    const text = `${line(answerable)}\n\n${line(unanswerable)}\n`;
+    const records = parseQuestionsJsonl(text);
+    expect(records).toHaveLength(2);
+    expect(records[0]!.id).toBe("github-q01");
+    expect(records[1]!.gold_spans).toEqual([]);
+  });
+
+  it("throws with the 1-based line number on malformed JSON", () => {
+    const text = `${line(answerable)}\n{not json}\n`;
+    expect(() => parseQuestionsJsonl(text)).toThrowError(/line 2/);
+  });
+
+  it("throws with the line number on a schema violation", () => {
+    const bad = { ...answerable, qtype: "single-clause" };
+    expect(() => parseQuestionsJsonl(`${line(bad)}\n`)).toThrowError(/line 1/);
+  });
+
+  it("returns an empty array for an empty file", () => {
+    expect(parseQuestionsJsonl("\n\n")).toEqual([]);
   });
 });

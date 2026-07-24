@@ -11,7 +11,7 @@
  * re-run cannot silently double the corpus and fill the k results with near-duplicates.
  */
 import "dotenv/config";
-import { insertChunks, prisma, resolveConfigId } from "@tos-rag/db";
+import { insertChunks, resolveConfigId, upsertDocument } from "@tos-rag/db";
 import { CHUNK_SIZES, STRATEGIES, type Strategy } from "@tos-rag/core";
 import { loadCanonical } from "../adapters/canonical";
 import { createLocalEmbedder } from "../adapters/embedder.local";
@@ -81,21 +81,12 @@ async function main(): Promise<void> {
   );
 
   if (!args.dryRun) {
-    await prisma.documents.upsert({
-      where: { id: canonical.docId },
-      create: {
-        id: canonical.docId,
-        title: canonical.title,
-        sha256: canonical.sha256,
-        version: canonical.version,
-        char_length: canonical.text.length,
-      },
-      update: {
-        title: canonical.title,
-        sha256: canonical.sha256,
-        version: canonical.version,
-        char_length: canonical.text.length,
-      },
+    await upsertDocument({
+      id: canonical.docId,
+      title: canonical.title,
+      sha256: canonical.sha256,
+      version: canonical.version,
+      charLength: canonical.text.length,
     });
   }
 
