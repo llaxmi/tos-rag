@@ -52,3 +52,14 @@ export interface RetrievedChunk extends DocSpan {
 
 /** Half-open range [start, end) into a string. */
 export type Range = [number, number];
+
+/** One generation call's result (PRD §8.6). */
+export interface GenerationResult {
+  answer: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+}
+
+/** The two generator arms (PRD §7): 'llama' = local Ollama, 'opus' = Anthropic. */
+export type GeneratorModel = "llama" | "opus";

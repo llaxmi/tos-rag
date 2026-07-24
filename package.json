@@ -10,6 +10,7 @@
     "ingest": "pnpm --filter backend ingest",
     "build-questions": "pnpm --filter backend build-questions",
     "seed-questions": "pnpm --filter backend seed-questions",
+    "run-phase1": "pnpm --filter backend run-phase1",
     "fetch-canonical": "pnpm --filter backend fetch-canonical"
   },
   "devDependencies": {

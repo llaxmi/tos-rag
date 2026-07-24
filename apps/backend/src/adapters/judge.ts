@@ -34,7 +34,11 @@ export function createJudge(env: JudgeEnv): Judge {
         body: JSON.stringify({
           model: MODEL_IDS.judge,
           max_tokens: JUDGE_MAX_TOKENS,
-          temperature: 0,
+          // Sonnet 5 removed `temperature` (400 if sent); determinism is
+          // best-effort regardless. Thinking disabled: this is a short binary
+          // classification, and adaptive thinking (the Sonnet 5 default) would
+          // consume the small max_tokens budget before the verdict.
+          thinking: { type: "disabled" },
           messages: [{ role: "user", content: prompt }],
         }),
       });

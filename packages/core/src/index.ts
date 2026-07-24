@@ -36,6 +36,16 @@ export {
 } from "./questions/resolve";
 export { parseQuestionsJsonl } from "./questions/jsonl";
 export {
+  runOne,
+  planRuns,
+  runKeyOf,
+  type OrchestratorDeps,
+  type RunOneInput,
+  type RunOneResult,
+  type RetrievedRef,
+  type RunKey,
+} from "./orchestrator/runOne";
+export {
   CHUNK_SIZES,
   EMBED_BATCH_MAX,
   EMBED_DIMS,
