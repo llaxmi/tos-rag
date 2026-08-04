@@ -21,6 +21,17 @@ export {
   parseCragVerdict,
   type CragVerdict,
 } from "./eval/crag";
+export { MODEL_PRICES, costUsd, type ModelPrice } from "./eval/cost";
+export {
+  buildDecomposePrompt,
+  buildNliPrompt,
+  parseNliVerdicts,
+  parseStatements,
+  reconstructContext,
+  scoreFaithfulness,
+  type FaithfulnessInput,
+  type FaithfulnessResult,
+} from "./eval/faithfulness";
 export {
   RULE_EXPLANATIONS,
   cragRuleVerdict,

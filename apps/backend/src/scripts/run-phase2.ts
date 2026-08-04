@@ -20,6 +20,7 @@
  */
 import "dotenv/config";
 import {
+  costUsd,
   GENERATOR_MODELS,
   MODEL_IDS,
   PHASE1_WINNER,
@@ -39,8 +40,6 @@ import {
 
 const PHASE = 2;
 
-/** Opus 4.8 list price, USD per million tokens. */
-const OPUS_USD_PER_MTOK = { input: 5, output: 25 };
 /** Observed answer length for this task; the prompt side is derived, not guessed. */
 const OPUS_OUTPUT_TOKENS = 200;
 
@@ -50,14 +49,14 @@ const OPUS_OUTPUT_TOKENS = 200;
  * prompt size is derived from the frozen constants actually in force — a
  * hardcoded figure silently under-reports the moment k or the winning chunk
  * size is amended, which is exactly when an operator is relying on it.
+ *
+ * Priced through `costUsd`, the same function that writes `evals.cost_usd`, so
+ * the estimate an operator budgets against and the cost the report quotes can
+ * never come from two different copies of Anthropic's price list.
  */
 function estimateOpusUsd(runs: number): number {
   const inputTokens = RETRIEVAL_K * PHASE1_WINNER.chunkSize + 300; // + question & template
-  return (
-    runs *
-    ((inputTokens / 1_000_000) * OPUS_USD_PER_MTOK.input +
-      (OPUS_OUTPUT_TOKENS / 1_000_000) * OPUS_USD_PER_MTOK.output)
-  );
+  return runs * costUsd(MODEL_IDS.opus, inputTokens, OPUS_OUTPUT_TOKENS);
 }
 
 async function main(): Promise<void> {
