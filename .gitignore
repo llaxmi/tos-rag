@@ -3,3 +3,9 @@ dist
 .env
 .DS_Store
 .turbo
+
+# Python (analysis/). uv.lock IS committed — the pinned env is part of reproducibility.
+.venv
+__pycache__/
+.pytest_cache/
+*.egg-info/
