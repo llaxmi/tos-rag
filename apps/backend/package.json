@@ -13,6 +13,7 @@
     "build-questions": "tsx src/scripts/build-questions.ts",
     "seed-questions": "tsx src/scripts/seed-questions.ts",
     "run-phase1": "tsx src/scripts/run-phase1.ts",
+    "rescore-crag": "tsx src/scripts/rescore-crag.ts",
     "fetch-canonical": "tsx src/scripts/fetch-canonical.ts"
   },
   "keywords": [],

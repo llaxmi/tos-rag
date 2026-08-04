@@ -3,11 +3,23 @@ import type { RetrievedChunk } from "./types";
 /** The exact abstention reply required by the fixed prompt (PRD §10.6). */
 export const ABSTENTION_TEXT = "I don't know";
 
-/** True iff the answer is exactly the abstention phrase (CRAG "Missing"). */
+/**
+ * True iff the answer is the abstention phrase, ignoring case, surrounding
+ * whitespace, smart quotes, and trailing sentence punctuation.
+ *
+ * Trailing punctuation must be ignored here because `normalizeAnswer` (SQuAD)
+ * strips it too: when the two disagreed, "I don't know." and "I don't know"
+ * took different branches of the CRAG decision order and scored a full point
+ * apart — see the 2026-08-01 entry in `docs/report-notes.md`.
+ */
 export function isAbstention(answer: string): boolean {
   return (
-    answer.replace(/[’‘]/g, "'").trim().toLowerCase() ===
-    ABSTENTION_TEXT.toLowerCase()
+    answer
+      .replace(/[’‘]/g, "'")
+      .trim()
+      .replace(/[.!?]+$/, "")
+      .trim()
+      .toLowerCase() === ABSTENTION_TEXT.toLowerCase()
   );
 }
 

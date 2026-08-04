@@ -44,22 +44,53 @@ export interface EvalScores {
 }
 
 /**
- * CRAG decision order (PRD §10.3), rules before the judge so exact and
- * abstention cases cost no API call:
- *   1. abstention           → 0 (Missing)
- *   2. normalized exact hit → +1 (Accurate)
- *   3. otherwise            → judge → +1 / −1
+ * The `judge_explanation` values written by the rule-decided branches. Anything
+ * that classifies stored rows as rule- vs judge-decided (e.g. rescore-crag)
+ * must match against these, never re-typed literals. The Python analysis step
+ * (`analysis/src/tosrag_analysis/db.py` JUDGED_QUERY) carries a cross-language
+ * copy that must stay in sync.
  */
+export const RULE_EXPLANATIONS = {
+  exactMatch: "exact match",
+  abstained: "abstained",
+} as const;
+
+/**
+ * CRAG decision order (PRD §10.3, amended 2026-08-01), rules before the judge
+ * so exact and abstention cases cost no API call:
+ *   1. normalized exact hit → +1 (Accurate)
+ *   2. abstention           → 0 (Missing)
+ *   3. otherwise            → judge → +1 / −1
+ *
+ * Exact match is checked *first* so that on an unanswerable question — where
+ * `expectedAnswer` is `ABSTENTION_TEXT` — a correct "I don't know" is scored
+ * Accurate rather than Missing. Under the old order those 4 of 20 Phase-1
+ * questions were unwinnable, capping a flawless run at 0.800. An abstention on
+ * an *answerable* question still falls through to rule 2 and scores 0, because
+ * it cannot match that question's reference answer.
+ *
+ * Exported as the single source of the rule half so re-scoring tools apply the
+ * exact rules the evaluator writes; returns null when the judge owns the row.
+ */
+export function cragRuleVerdict(
+  answer: string,
+  expectedAnswer: string,
+): { score: 1 | 0; explanation: string } | null {
+  if (normalizeAnswer(answer) === normalizeAnswer(expectedAnswer)) {
+    return { score: 1, explanation: RULE_EXPLANATIONS.exactMatch };
+  }
+  if (isAbstention(answer)) {
+    return { score: 0, explanation: RULE_EXPLANATIONS.abstained };
+  }
+  return null;
+}
+
 async function cragScore(
   input: EvaluateInput,
   judge: Judge,
 ): Promise<{ score: -1 | 0 | 1; explanation: string }> {
-  if (isAbstention(input.answer)) {
-    return { score: 0, explanation: "abstained" };
-  }
-  if (normalizeAnswer(input.answer) === normalizeAnswer(input.expectedAnswer)) {
-    return { score: 1, explanation: "exact match" };
-  }
+  const rule = cragRuleVerdict(input.answer, input.expectedAnswer);
+  if (rule) return rule;
   const raw = await judge.complete(
     buildCragPrompt(input.question, input.expectedAnswer, input.answer),
   );
