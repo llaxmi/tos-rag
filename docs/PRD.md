@@ -317,7 +317,7 @@ Two Sonnet 5 calls per answer: (1) decompose the answer into atomic statements �
 
 ### 10.3 CRAG-style correctness (headline)
 
-Rules first: lowercased answer == "i don't know" → **Missing (0)**; exact string match with expected answer → **Accurate (+1)**. Otherwise a reference-guided **binary** judge (Claude Sonnet 5, temp 0, JSON, explanation-before-score, few-shot examples adapted from `facebookresearch/CRAG` `prompts/templates.py`): accurate (+1) or incorrect (−1).
+Rules first, **in this order** (amended 2026-08-02, see §15 #12): normalized exact match with the expected answer → **Accurate (+1)**; else lowercased answer == "i don't know", ignoring trailing sentence punctuation → **Missing (0)**. Otherwise a reference-guided **binary** judge (Claude Sonnet 5, temp 0, JSON, explanation-before-score, few-shot examples adapted from `facebookresearch/CRAG` `prompts/templates.py`): accurate (+1) or incorrect (−1).
 
 `Truthfulness = accuracy_rate − hallucination_rate` (mean of per-question scores).
 
@@ -418,6 +418,19 @@ All dashboard data comes from `/api/results/*` reading `analysis_results` (+ raw
 | 9 | §9 schema as written | Adds `create extension vector` and RLS (enabled, no policies) on all 7 tables | The extension is needed on a fresh project. RLS changes nothing operationally — the backend uses the service-role key, which bypasses it — but silences the Supabase "table exposed" advisor. |
 | 10 | §5 GitHub ToS at `Policies/github-terms-of-service.md` | `Policies/github-terms/github-terms-of-service.md` | Upstream moved the file; the flat path is a 404. |
 | 11 | Retrieval depth held constant at **k = 8** | **k = 5** | Owner decision (2026-07-23) to retrieve the top-5 chunks per query. Amends the frozen-constants set (§7); runs collected at k = 8 are not comparable and must be re-collected. |
+| 12 | §10.3 rules: abstention → 0 checked *before* exact match → +1 | Exact match checked first; abstention detection ignores trailing punctuation | Owner decision (2026-08-02). The two rules disagreed about punctuation, so `"I don't know."` and `"I don't know"` scored a full point apart on identical behaviour; and scoring a correct abstention 0 made the 4 unanswerable questions unwinnable, capping a flawless Phase-1 run at 0.800. Re-scored from stored answers (`pnpm rescore-crag`) — no re-generation. **Changes the Phase-1 winner from `recursive:256` to `sentence:512`.** |
+
+- **2026-08-02 — CRAG rule order and abstention punctuation (§10.3).** `cragScore`
+  checks normalized exact match before abstention, and `isAbstention` ignores
+  trailing sentence punctuation, so the two rules agree on what an abstention is.
+  A correct "I don't know" on an unanswerable question is now **Accurate (+1)**,
+  matching CRAG's own semantics — the abstention *behaviour* remains measured
+  separately by §10.4, which is where it belongs. Only stored scores changed
+  (36 rows: 34 × 0 → +1, 2 × −1 → 0); no answer was regenerated and no judge was
+  re-invoked, so every `runs.answer` is untouched and the correction is
+  reproducible via `pnpm rescore-crag`. Consequence: the §7 winner selection now
+  yields a tie at 0.900 between `sentence:512` and `recursive:256`, broken by
+  char-recall in favour of **`sentence:512`**.
 
 - **2026-07-23 — Retrieval depth k = 8 → 5.** `RETRIEVAL_K` in `@tos-rag/core`
   is reduced from 8 to 5 chunks per query (a §7 frozen constant). This changes
