@@ -22,6 +22,7 @@ import {
   type QuestionRecord,
 } from "@tos-rag/core";
 import { loadCanonical, REPO_ROOT } from "../adapters/canonical";
+import { getFlag } from "./args";
 
 const QUESTIONS_DIR = join(REPO_ROOT, "corpus", "questions");
 const AUTHORING_DIR = join(QUESTIONS_DIR, "authoring");
@@ -33,8 +34,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  const i = argv.indexOf("--doc");
-  const doc = i === -1 ? undefined : argv[i + 1];
+  const doc = getFlag(argv, "--doc");
   return {
     docIds: doc ? [doc] : [...DOC_IDS],
     check: argv.includes("--check"),
