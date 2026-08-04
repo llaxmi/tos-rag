@@ -3,11 +3,11 @@ import { getResults } from "../lib/api";
 import {
   formatMeanCI,
   formatUSD,
+  PHASE1_WINNER,
   SAMPLE_COST,
   SAMPLE_LATENCY,
   SAMPLE_PHASE1,
   SAMPLE_PHASE2,
-  SAMPLE_WINNER,
   SIZES,
   STRATEGIES,
   type ConfigRow,
@@ -112,7 +112,7 @@ export function DashboardView() {
         <p className={EYEBROW}>Results</p>
         <h1>What the experiment measured.</h1>
         <div className="mt-7 flex flex-wrap items-center gap-8">
-          <ContactSheet rows={rows} winner={SAMPLE_WINNER} />
+          <ContactSheet rows={rows} winner={PHASE1_WINNER} />
           <div className="min-w-65 flex-1">
             <p className="text-ink-soft max-w-[46ch] text-[15px]">
               15 chunking configurations, two generators, 360 runs — every
@@ -121,7 +121,7 @@ export function DashboardView() {
             <p className="text-muted-foreground mt-4.5 flex items-baseline gap-2.5 text-[11.5px] font-bold uppercase tracking-[0.12em]">
               Best configuration
               <span className="text-compare font-mono text-[13px] font-medium normal-case tracking-normal">
-                {SAMPLE_WINNER.strategy} × {SAMPLE_WINNER.chunkSize} tok
+                {PHASE1_WINNER.strategy} × {PHASE1_WINNER.chunkSize} tok
               </span>
             </p>
           </div>
@@ -188,8 +188,8 @@ export function DashboardView() {
                 <TableBody>
                   {rows.map((r) => {
                     const isWinner =
-                      r.strategy === SAMPLE_WINNER.strategy &&
-                      r.chunkSize === SAMPLE_WINNER.chunkSize;
+                      r.strategy === PHASE1_WINNER.strategy &&
+                      r.chunkSize === PHASE1_WINNER.chunkSize;
                     return (
                       <TableRow
                         key={`${r.strategy}-${r.chunkSize}`}
