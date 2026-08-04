@@ -81,9 +81,19 @@ describe("evaluateRun", () => {
     expect(scores.cost_usd).toBeNull();
   });
 
-  it("scores an abstention as Missing (0) without calling the judge", async () => {
+  it("scores an abstention on an answerable question as Missing (0) without calling the judge", async () => {
     const judge = fakeJudge("SHOULD NOT BE CALLED");
     const scores = await evaluateRun({ ...base, answer: "I don't know" }, { judge });
+    expect(scores.crag_score).toBe(0);
+    expect(scores.judge_explanation).toBe("abstained");
+    expect(judge.calls).toBe(0);
+  });
+
+  it("scores a punctuated abstention on an answerable question as Missing (0), not Incorrect", async () => {
+    // Regression: "I don't know." used to miss the abstention rule and reach
+    // the judge, which scored it −1 for "failing to provide" the answer.
+    const judge = fakeJudge("SHOULD NOT BE CALLED");
+    const scores = await evaluateRun({ ...base, answer: "I don't know." }, { judge });
     expect(scores.crag_score).toBe(0);
     expect(scores.judge_explanation).toBe("abstained");
     expect(judge.calls).toBe(0);
@@ -124,7 +134,21 @@ describe("evaluateRun", () => {
     expect(scores.char_precision).toBeNull();
     expect(scores.char_recall).toBeNull();
     expect(scores.hit_at_8).toBeNull();
-    expect(scores.crag_score).toBe(0); // correct abstention
+    // PRD §10.3 amendment: on an unanswerable question the abstention IS the
+    // reference answer, so it is Accurate (+1). Scoring it 0 capped a perfect
+    // run at 0.800 over the 20-question Phase-1 set.
+    expect(scores.crag_score).toBe(1);
+    expect(scores.judge_explanation).toBe("exact match");
+    expect(judge.calls).toBe(0);
+  });
+
+  it("scores a punctuated abstention on an unanswerable question as Accurate (+1)", async () => {
+    const judge = fakeJudge("SHOULD NOT BE CALLED");
+    const scores = await evaluateRun(
+      { ...base, goldSpans: [], expectedAnswer: "I don't know", answer: "I don't know." },
+      { judge },
+    );
+    expect(scores.crag_score).toBe(1);
     expect(judge.calls).toBe(0);
   });
 

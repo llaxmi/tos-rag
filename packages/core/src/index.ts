@@ -22,6 +22,8 @@ export {
   type CragVerdict,
 } from "./eval/crag";
 export {
+  RULE_EXPLANATIONS,
+  cragRuleVerdict,
   evaluateRun,
   type EvalScores,
   type EvaluateInput,
