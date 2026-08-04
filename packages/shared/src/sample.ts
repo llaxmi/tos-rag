@@ -7,7 +7,7 @@
  * whenever they are displayed.
  */
 
-import { CHUNK_SIZES, STRATEGIES } from "@tos-rag/core";
+import { CHUNK_SIZES, PHASE1_WINNER, STRATEGIES } from "@tos-rag/core";
 
 export interface ConfigRow {
   strategy: string;
@@ -24,7 +24,7 @@ export interface ConfigRow {
 // The frozen experimental controls live in @tos-rag/core; re-exported here so
 // the demo's grid axes stay in lockstep with the pipeline (and are not sourced
 // from this illustrative module).
-export { STRATEGIES };
+export { STRATEGIES, PHASE1_WINNER };
 export const SIZES = CHUNK_SIZES;
 
 const base: Record<(typeof STRATEGIES)[number], number> = {
@@ -34,10 +34,13 @@ const base: Record<(typeof STRATEGIES)[number], number> = {
   semantic: 0.55,
   section: 0.53,
 };
+// Shaped so the generated grid's argmax is PHASE1_WINNER — the dashboard
+// highlights that config as the winner, and a sample table whose best cell sat
+// elsewhere would read as a rendering bug rather than as placeholder data.
 const sizeBump: Record<(typeof SIZES)[number], number> = {
   128: -0.04,
-  256: 0.06,
-  512: 0.0,
+  256: 0.0,
+  512: 0.06,
 };
 
 export const SAMPLE_PHASE1: ConfigRow[] = STRATEGIES.flatMap((strategy) =>
@@ -58,8 +61,6 @@ export const SAMPLE_PHASE1: ConfigRow[] = STRATEGIES.flatMap((strategy) =>
     };
   }),
 );
-
-export const SAMPLE_WINNER = { strategy: "sentence", chunkSize: 256 };
 
 export interface PairedMetricRow {
   metric: string;

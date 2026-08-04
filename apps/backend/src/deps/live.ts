@@ -1,18 +1,23 @@
 import type { RetrievedChunk, Strategy } from "@tos-rag/core";
-import { GENERATION_MAX_TOKENS, MODEL_IDS, RETRIEVAL_K } from "@tos-rag/core";
+import { GENERATION_MAX_TOKENS, MODEL_IDS, PHASE1_WINNER, RETRIEVAL_K } from "@tos-rag/core";
 import { matchChunks, prisma, resolveConfigId } from "@tos-rag/db";
 import type { Embedder } from "../adapters/embedder";
 import type { AppDeps, GenerationResult } from "../app";
 import { generateOllama } from "./ollama";
 
 export interface LiveEnv {
-  OLLAMA_URL: string;
-  OLLAMA_MODEL: string;
+  OLLAMA_URL?: string;
+  OLLAMA_MODEL?: string;
   ANTHROPIC_API_KEY?: string;
 }
 
-/** The Phase 1 winning configuration — the demo's default pipeline (PRD §7). */
-const WINNING_CONFIG = { strategy: "sentence", chunkSize: 256 } as const;
+/**
+ * Applied here rather than at each call site so the server and the phase
+ * runners cannot drift apart. The model tag defaults from `MODEL_IDS.llama` —
+ * the same constant written to `runs.model` — so the label the report cites and
+ * the model actually invoked come from one source.
+ */
+const OLLAMA_DEFAULT_URL = "http://localhost:11434";
 
 /**
  * Live dependencies (PRD §4/§8): pgvector exact-scan retrieval via the
@@ -89,8 +94,8 @@ export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
       // app.ts always fills strategy/chunkSize from winningConfig, so both are
       // present on every call and the config is resolved by identity.
       const configId = await cachedConfigId(
-        opts?.strategy ?? WINNING_CONFIG.strategy,
-        opts?.chunkSize ?? WINNING_CONFIG.chunkSize,
+        opts?.strategy ?? PHASE1_WINNER.strategy,
+        opts?.chunkSize ?? PHASE1_WINNER.chunkSize,
       );
       const vector = await embedder.embedQuery(question);
       const rows = await matchChunks(
@@ -115,7 +120,10 @@ export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
       model === "opus"
         ? generateOpus(prompt)
         : generateOllama(
-            { url: env.OLLAMA_URL, model: env.OLLAMA_MODEL },
+            {
+              url: env.OLLAMA_URL ?? OLLAMA_DEFAULT_URL,
+              model: env.OLLAMA_MODEL ?? MODEL_IDS.llama,
+            },
             prompt,
           ),
 
@@ -126,6 +134,6 @@ export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
       return rows;
     },
 
-    winningConfig: WINNING_CONFIG,
+    winningConfig: PHASE1_WINNER,
   };
 }

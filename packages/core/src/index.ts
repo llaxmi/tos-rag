@@ -40,12 +40,14 @@ export { parseQuestionsJsonl } from "./questions/jsonl";
 export {
   runOne,
   planRuns,
+  planPhase2Runs,
   runKeyOf,
   type OrchestratorDeps,
   type RunOneInput,
   type RunOneResult,
   type RetrievedRef,
   type RunKey,
+  type Phase2RunKey,
 } from "./orchestrator/runOne";
 export {
   CHUNK_SIZES,
@@ -57,6 +59,7 @@ export {
   GENERATION_SEED,
   GoldSpanSchema,
   MODEL_IDS,
+  PHASE1_WINNER,
   QTYPES,
   QuestionRecordSchema,
   RETRIEVAL_K,

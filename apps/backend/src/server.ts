@@ -26,14 +26,7 @@ if (!DATABASE_URL) {
 // Loads the ONNX model once, at boot, rather than per request.
 const embedder = await createEmbedder({ EMBEDDER, EMBEDDER_DTYPE });
 
-const deps = createLiveDeps(
-  {
-    OLLAMA_URL: OLLAMA_URL ?? "http://localhost:11434",
-    OLLAMA_MODEL: OLLAMA_MODEL ?? "llama3.1:8b",
-    ANTHROPIC_API_KEY,
-  },
-  embedder,
-);
+const deps = createLiveDeps({ OLLAMA_URL, OLLAMA_MODEL, ANTHROPIC_API_KEY }, embedder);
 
 const app = createApp(deps);
 

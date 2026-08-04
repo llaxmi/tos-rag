@@ -15,6 +15,7 @@ import { insertChunks, resolveConfigId, upsertDocument } from "@tos-rag/db";
 import { CHUNK_SIZES, STRATEGIES, type Strategy } from "@tos-rag/core";
 import { loadCanonical } from "../adapters/canonical";
 import { createLocalEmbedder } from "../adapters/embedder.local";
+import { getFlag } from "./args";
 import { planIngest } from "./plan-ingest";
 
 interface Args {
@@ -26,10 +27,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  const get = (flag: string): string | undefined => {
-    const i = argv.indexOf(flag);
-    return i === -1 ? undefined : argv[i + 1];
-  };
+  const get = (flag: string) => getFlag(argv, flag);
 
   const docId = get("--doc") ?? "github-tos";
   const dtype = get("--dtype") as Args["dtype"];

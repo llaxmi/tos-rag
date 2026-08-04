@@ -1,11 +1,12 @@
 import { evaluateRun, type EvalScores, type Judge } from "../eval/evaluate";
 import { buildRagPrompt } from "../prompts";
-import type {
-  GenerationResult,
-  GeneratorModel,
-  RetrievedChunk,
-  Span,
-  Strategy,
+import {
+  GENERATOR_MODELS,
+  type GenerationResult,
+  type GeneratorModel,
+  type RetrievedChunk,
+  type Span,
+  type Strategy,
 } from "../types";
 
 /**
@@ -139,3 +140,38 @@ export function planRuns(
   }
   return pending;
 }
+
+/** A pending Phase-2 unit of work: one generator arm × one question. */
+export interface Phase2RunKey {
+  model: GeneratorModel;
+  questionId: string;
+}
+
+/**
+ * Phase 2 (PRD §7 Objective 2) holds the config fixed at the Phase-1 winner and
+ * fans out over the generator arms instead — per arm, the same skip logic as
+ * `planRuns`. Resume is per-arm, so the done-sets arrive keyed by model — each
+ * one as returned by `getCompletedRunKeys(2, MODEL_IDS[model])`, in `runKeyOf`
+ * form. `models` defaults to all arms in `GENERATOR_MODELS` order (Llama before
+ * Opus, so a `--limit` smoke run exercises the free arm first); a single-arm
+ * invocation passes just that arm.
+ *
+ * `doneByModel` is partial because a single-arm invocation only queries the arm
+ * it is running — an entry missing means "nothing done for that arm", which is
+ * what an unqueried arm truthfully is. Requiring every key would force callers
+ * to either fabricate an empty set or assert a record they never built.
+ */
+export function planPhase2Runs(
+  configId: number,
+  questionIds: string[],
+  doneByModel: Readonly<Partial<Record<GeneratorModel, ReadonlySet<string>>>>,
+  models: readonly GeneratorModel[] = GENERATOR_MODELS,
+): Phase2RunKey[] {
+  return models.flatMap((model) =>
+    planRuns([configId], questionIds, doneByModel[model] ?? EMPTY_DONE).map(
+      ({ questionId }) => ({ model, questionId }),
+    ),
+  );
+}
+
+const EMPTY_DONE: ReadonlySet<string> = new Set();

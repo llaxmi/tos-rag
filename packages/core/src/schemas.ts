@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Strategy } from "./types";
 
 /** Gold clause span in canonical-document character offsets (PRD §6). */
 export const GoldSpanSchema = z
@@ -42,6 +43,17 @@ export const MODEL_IDS = {
   opus: "claude-opus-4-8",
   judge: "claude-sonnet-5",
 } as const;
+
+/**
+ * The Phase 1 winner (PRD §7 selection rule: best mean Truthfulness, ties →
+ * char recall → latency). Frozen as a constant rather than read from
+ * `analysis_results` at runtime: the demo pipeline must not depend on the
+ * analysis step having run, nor change underneath it when analysis re-runs.
+ */
+export const PHASE1_WINNER = { strategy: "sentence", chunkSize: 512 } as const satisfies {
+  strategy: Strategy;
+  chunkSize: (typeof CHUNK_SIZES)[number];
+};
 
 /**
  * EmbeddingGemma's asymmetric prompt prefixes. The model was trained with
