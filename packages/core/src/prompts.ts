@@ -24,6 +24,26 @@ export function isAbstention(answer: string): boolean {
 }
 
 /**
+ * The context block of the fixed prompt: a numbered `[doc §start–end]` header
+ * per chunk, blank-line separated.
+ *
+ * Shared with `reconstructContext` (`eval/faithfulness.ts`), which rebuilds this
+ * block from stored spans. Faithfulness only means something if it scores
+ * against exactly what the generator saw, so both go through one template
+ * instead of two copies that have to keep agreeing.
+ */
+export function formatContextBlocks(
+  chunks: readonly Pick<RetrievedChunk, "docId" | "charStart" | "charEnd" | "text">[],
+): string {
+  return chunks
+    .map(
+      (c, i) =>
+        `[${i + 1}] [${c.docId} §${c.charStart}–${c.charEnd}]\n${c.text}`,
+    )
+    .join("\n\n");
+}
+
+/**
  * The single fixed generation prompt used by both models in both phases
  * (PRD §10.6). Any change to this template invalidates cross-run comparisons.
  */
@@ -31,12 +51,7 @@ export function buildRagPrompt(
   question: string,
   chunks: readonly RetrievedChunk[],
 ): string {
-  const context = chunks
-    .map(
-      (c, i) =>
-        `[${i + 1}] [${c.docId} §${c.charStart}–${c.charEnd}]\n${c.text}`,
-    )
-    .join("\n\n");
+  const context = formatContextBlocks(chunks);
   return [
     "You answer questions about Terms of Service documents using ONLY the provided context.",
     "",
