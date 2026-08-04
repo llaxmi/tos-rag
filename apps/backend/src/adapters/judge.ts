@@ -14,9 +14,22 @@ export interface JudgeEnv {
   ANTHROPIC_API_KEY?: string;
 }
 
+/** CRAG verdicts are one sentence plus a score token. */
 const JUDGE_MAX_TOKENS = 512;
 
-export function createJudge(env: JudgeEnv): Judge {
+/**
+ * `maxTokens` is a parameter because faithfulness asks the same judge for a
+ * *list* — statements, then one verdict each. At 512 a long answer truncates
+ * mid-JSON and the reply cannot be parsed at all.
+ *
+ * `fetchImpl` is injectable, like `generateOllama`, so the truncation guard
+ * below can be tested without a network call.
+ */
+export function createJudge(
+  env: JudgeEnv,
+  maxTokens = JUDGE_MAX_TOKENS,
+  fetchImpl: typeof fetch = fetch,
+): Judge {
   return {
     async complete(prompt: string): Promise<string> {
       if (!env.ANTHROPIC_API_KEY) {
@@ -24,7 +37,7 @@ export function createJudge(env: JudgeEnv): Judge {
           "The CRAG judge isn't configured — set ANTHROPIC_API_KEY to run evaluation.",
         );
       }
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "x-api-key": env.ANTHROPIC_API_KEY,
@@ -33,7 +46,7 @@ export function createJudge(env: JudgeEnv): Judge {
         },
         body: JSON.stringify({
           model: MODEL_IDS.judge,
-          max_tokens: JUDGE_MAX_TOKENS,
+          max_tokens: maxTokens,
           // Sonnet 5 removed `temperature` (400 if sent); determinism is
           // best-effort regardless. Thinking disabled: this is a short binary
           // classification, and adaptive thinking (the Sonnet 5 default) would
@@ -47,7 +60,19 @@ export function createJudge(env: JudgeEnv): Judge {
       }
       const json = (await res.json()) as {
         content: Array<{ type: string; text?: string }>;
+        stop_reason?: string;
       };
+      // A reply cut off at the cap is a JSON prefix with no closing brace. The
+      // parsers' line fallback would read those broken lines as real content and
+      // write a plausible-looking score with no error anywhere. Caught here,
+      // where `stop_reason` lives, so it becomes a failed row instead. The CRAG
+      // path gets the same protection for free.
+      if (json.stop_reason === "max_tokens") {
+        throw new Error(
+          `Judge reply was truncated at the ${maxTokens}-token cap (stop_reason: max_tokens) — ` +
+            "the JSON is incomplete and unsafe to parse.",
+        );
+      }
       return json.content
         .filter((block) => block.type === "text")
         .map((block) => block.text ?? "")

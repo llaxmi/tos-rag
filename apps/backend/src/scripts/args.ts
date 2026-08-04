@@ -63,3 +63,79 @@ export interface Phase2Args {
 export function parsePhase2Args(argv: string[]): Phase2Args {
   return { model: parseModelFlag(argv), limit: parseLimitFlag(argv) };
 }
+
+/** The three deferred `evals` columns, by the flag name that selects each. */
+export const ALL_METRICS = ["faithfulness", "cosine", "cost"] as const;
+export type MetricName = (typeof ALL_METRICS)[number];
+
+export interface BackfillArgs {
+  apply: boolean;
+  force: boolean;
+  phase?: 1 | 2;
+  metrics: MetricName[];
+}
+
+/**
+ * `--apply | --force | --phase 1|2 | --metric faithfulness|cosine|cost`.
+ *
+ * Unknown arguments are rejected, not ignored: a typo like `--metirc` would
+ * otherwise widen the scope back to every metric and spend money on rows nobody
+ * asked for. Absent flags mean "everything", which is safe only because the
+ * script does nothing without `--apply`.
+ */
+export function parseBackfillArgs(argv: string[]): BackfillArgs {
+  const valueFlags = new Set(["--phase", "--metric"]);
+  const booleanFlags = new Set(["--apply", "--force"]);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    const equalsAt = arg.indexOf("=");
+    const name = equalsAt === -1 ? arg : arg.slice(0, equalsAt);
+
+    if (booleanFlags.has(name)) {
+      if (equalsAt !== -1) {
+        throw new Error(`${name} does not take a value (got "${arg}").`);
+      }
+      continue;
+    }
+    if (!valueFlags.has(name)) {
+      throw new Error(`Unknown argument "${arg}".`);
+    }
+    if (equalsAt !== -1) {
+      if (arg.slice(equalsAt + 1).length === 0) {
+        throw new Error(`${name} requires a value.`);
+      }
+      continue;
+    }
+    const value = argv[i + 1];
+    if (value === undefined || value.startsWith("--")) {
+      throw new Error(`${name} requires a value.`);
+    }
+    i++;
+  }
+
+  const rawPhase = getFlag(argv, "--phase");
+  let phase: 1 | 2 | undefined;
+  if (rawPhase !== undefined) {
+    if (rawPhase !== "1" && rawPhase !== "2") {
+      throw new Error(`--phase must be 1 or 2 (got "${rawPhase}").`);
+    }
+    phase = rawPhase === "1" ? 1 : 2;
+  }
+
+  const rawMetric = getFlag(argv, "--metric");
+  let metrics: MetricName[] = [...ALL_METRICS];
+  if (rawMetric !== undefined) {
+    const metric = ALL_METRICS.find((m) => m === rawMetric);
+    if (metric === undefined) {
+      throw new Error(`--metric must be one of ${ALL_METRICS.join(", ")} (got "${rawMetric}").`);
+    }
+    metrics = [metric];
+  }
+
+  return {
+    apply: argv.includes("--apply"),
+    force: argv.includes("--force"),
+    phase,
+    metrics,
+  };
+}
