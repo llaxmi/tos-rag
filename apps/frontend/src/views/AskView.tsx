@@ -10,6 +10,7 @@ import {
   formatMs,
   MODEL_LABELS,
   parseCitations,
+  PHASE1_WINNER,
   SIZES,
   STRATEGIES,
 } from "@tos-rag/shared";
@@ -46,9 +47,6 @@ const MODELS = (Object.keys(MODEL_LABELS) as GeneratorModel[]).map((value) => ({
   label: MODEL_LABELS[value],
 }));
 
-/** The experiment's winning configuration — the bench's default state. */
-const WINNER = { strategy: "sentence", chunkSize: 256 as number };
-
 /** Selected chips read as navy fills, not shadcn's subtle hover surface. */
 const CHIP_ON =
   "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
@@ -56,8 +54,8 @@ const CHIP_ON =
 export function AskView() {
   const [question, setQuestion] = useState("");
   const [docValue, setDocValue] = useState("both");
-  const [strategy, setStrategy] = useState<string>(WINNER.strategy);
-  const [chunkSize, setChunkSize] = useState<number>(WINNER.chunkSize);
+  const [strategy, setStrategy] = useState<string>(PHASE1_WINNER.strategy);
+  const [chunkSize, setChunkSize] = useState<number>(PHASE1_WINNER.chunkSize);
   const [model, setModel] = useState<GeneratorModel>("llama");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +64,8 @@ export function AskView() {
   const [flashed, setFlashed] = useState<number | null>(null);
 
   const isWinner =
-    strategy === WINNER.strategy &&
-    chunkSize === WINNER.chunkSize &&
+    strategy === PHASE1_WINNER.strategy &&
+    chunkSize === PHASE1_WINNER.chunkSize &&
     model === "llama";
 
   async function submit(q: string) {
@@ -157,8 +155,8 @@ export function AskView() {
               size="sm"
               className="text-ink-soft hover:text-foreground h-auto p-0 font-mono text-[11.5px]"
               onClick={() => {
-                setStrategy(WINNER.strategy);
-                setChunkSize(WINNER.chunkSize);
+                setStrategy(PHASE1_WINNER.strategy);
+                setChunkSize(PHASE1_WINNER.chunkSize);
                 setModel("llama");
               }}
             >

@@ -4,6 +4,7 @@ export {
   matchChunks,
   insertChunks,
   resolveConfigId,
+  countChunksForConfig,
   type MatchedChunk,
   type ChunkRow,
 } from "./vector";
