@@ -48,5 +48,7 @@ export { CutMark } from "./CutMark";
 export { EvidenceCard } from "./EvidenceCard";
 export { Swatch } from "./Swatch";
 export { FactorBars, type FactorBar } from "./viz/FactorBars";
-export { Heatmap, ContactSheet } from "./viz/Heatmap";
+export { Heatmap, HeatmapScale, ContactSheet } from "./viz/Heatmap";
 export { LatencyBoxes } from "./viz/LatencyBoxes";
+export { LatencyStacks, RETRIEVAL_COLOR, GENERATION_COLOR } from "./viz/LatencyStacks";
+export { Hero } from "./Hero";
