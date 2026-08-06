@@ -44,6 +44,21 @@ export async function resolveConfigId(
 }
 
 /**
+ * Counts chunks ingested for a config id. `configs` rows are seeded
+ * independently of ingestion (`prisma/seed.ts` seeds all 15 rows up front), so
+ * `resolveConfigId` succeeding is not evidence the config has any chunks — a
+ * winning config that was never ingested silently retrieves zero chunks per
+ * question, and a caller that doesn't check this can write a full batch of
+ * plausible-looking abstentions. Callers that are about to spend a run budget
+ * on a config should assert this is non-zero before starting the loop, the
+ * same "assert before I/O" discipline `plan-ingest.ts` uses for the offset
+ * invariant.
+ */
+export async function countChunksForConfig(configId: number): Promise<number> {
+  return prisma.chunks.count({ where: { config_id: configId } });
+}
+
+/**
  * pgvector text input format: a bracketed, comma-separated list with no spaces.
  * Number#toString may emit exponential notation for very small components
  * (e.g. `1e-7`); pgvector's parser accepts that form, so no reformatting is needed.

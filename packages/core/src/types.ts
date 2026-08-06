@@ -61,5 +61,11 @@ export interface GenerationResult {
   latencyMs: number;
 }
 
-/** The two generator arms (PRD §7): 'llama' = local Ollama, 'opus' = Anthropic. */
-export type GeneratorModel = "llama" | "opus";
+/**
+ * The two generator arms (PRD §7): 'llama' = local Ollama, 'opus' = Anthropic.
+ * Order matters: Phase-2 planning emits arms in this order, so Llama (free,
+ * local) always runs before Opus (paid) — a `--limit` smoke run then surfaces
+ * wiring faults before the paid arm spends anything.
+ */
+export const GENERATOR_MODELS = ["llama", "opus"] as const;
+export type GeneratorModel = (typeof GENERATOR_MODELS)[number];

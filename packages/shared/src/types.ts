@@ -6,7 +6,10 @@ export interface Evidence {
   score: number;
 }
 
-export type GeneratorModel = "llama" | "opus";
+/** Re-exported, not re-declared: the arms are a frozen experimental control
+ * owned by @tos-rag/core, and a second copy here could silently drift. */
+import type { GeneratorModel } from "@tos-rag/core";
+export type { GeneratorModel };
 
 /** Display names for the two generators — the single source for UI labels. */
 export const MODEL_LABELS: Record<GeneratorModel, string> = {

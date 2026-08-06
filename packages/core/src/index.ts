@@ -21,7 +21,20 @@ export {
   parseCragVerdict,
   type CragVerdict,
 } from "./eval/crag";
+export { MODEL_PRICES, costUsd, type ModelPrice } from "./eval/cost";
 export {
+  buildDecomposePrompt,
+  buildNliPrompt,
+  parseNliVerdicts,
+  parseStatements,
+  reconstructContext,
+  scoreFaithfulness,
+  type FaithfulnessInput,
+  type FaithfulnessResult,
+} from "./eval/faithfulness";
+export {
+  RULE_EXPLANATIONS,
+  cragRuleVerdict,
   evaluateRun,
   type EvalScores,
   type EvaluateInput,
@@ -38,12 +51,14 @@ export { parseQuestionsJsonl } from "./questions/jsonl";
 export {
   runOne,
   planRuns,
+  planPhase2Runs,
   runKeyOf,
   type OrchestratorDeps,
   type RunOneInput,
   type RunOneResult,
   type RetrievedRef,
   type RunKey,
+  type Phase2RunKey,
 } from "./orchestrator/runOne";
 export {
   CHUNK_SIZES,
@@ -55,6 +70,7 @@ export {
   GENERATION_SEED,
   GoldSpanSchema,
   MODEL_IDS,
+  PHASE1_WINNER,
   QTYPES,
   QuestionRecordSchema,
   RETRIEVAL_K,

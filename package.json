@@ -11,6 +11,12 @@
     "build-questions": "pnpm --filter backend build-questions",
     "seed-questions": "pnpm --filter backend seed-questions",
     "run-phase1": "pnpm --filter backend run-phase1",
+    "run-phase2": "pnpm --filter backend run-phase2",
+    "rescore-crag": "pnpm --filter backend rescore-crag",
+    "backfill-metrics": "pnpm --filter backend backfill-metrics",
+    "analyze": "cd analysis && uv run analyze",
+    "judge-sample": "cd analysis && uv run judge-sample",
+    "judge-kappa": "cd analysis && uv run judge-kappa",
     "fetch-canonical": "pnpm --filter backend fetch-canonical"
   },
   "devDependencies": {

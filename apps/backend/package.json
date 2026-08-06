@@ -13,6 +13,9 @@
     "build-questions": "tsx src/scripts/build-questions.ts",
     "seed-questions": "tsx src/scripts/seed-questions.ts",
     "run-phase1": "tsx src/scripts/run-phase1.ts",
+    "run-phase2": "tsx src/scripts/run-phase2.ts",
+    "rescore-crag": "tsx src/scripts/rescore-crag.ts",
+    "backfill-metrics": "tsx src/scripts/backfill-metrics.ts",
     "fetch-canonical": "tsx src/scripts/fetch-canonical.ts"
   },
   "keywords": [],

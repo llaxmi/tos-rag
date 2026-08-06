@@ -1,17 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { generateOllama } from "../src/deps/ollama";
-
-function okFetch(body: unknown, capture?: (url: string, init: RequestInit) => void) {
-  return (async (url: string, init: RequestInit) => {
-    capture?.(url, init);
-    return {
-      ok: true,
-      status: 200,
-      json: async () => body,
-      text: async () => JSON.stringify(body),
-    } as Response;
-  }) as unknown as typeof fetch;
-}
+import { okFetch } from "./helpers";
 
 describe("generateOllama", () => {
   test("posts to /api/generate with frozen options and maps the response", async () => {

@@ -26,3 +26,18 @@ export async function upsertDocument(doc: DocumentRow): Promise<void> {
     update: data,
   });
 }
+
+/**
+ * The sha256 `upsertDocument` wrote at ingest time, or `null` if the document
+ * has no row. `loadCanonical` only checks the file on disk against
+ * `manifest.json`, so a re-fetch that also re-froze the manifest would pass it
+ * while every stored span points at different text. This column is the baseline
+ * that catches that.
+ */
+export async function getDocumentSha256(docId: string): Promise<string | null> {
+  const doc = await prisma.documents.findUnique({
+    where: { id: docId },
+    select: { sha256: true },
+  });
+  return doc?.sha256 ?? null;
+}

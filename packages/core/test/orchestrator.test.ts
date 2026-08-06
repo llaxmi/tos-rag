@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  planPhase2Runs,
   planRuns,
   runKeyOf,
   runOne,
   type GenerationResult,
+  type GeneratorModel,
   type Judge,
   type OrchestratorDeps,
   type RetrievedChunk,
@@ -98,5 +100,54 @@ describe("planRuns", () => {
   it("returns nothing when all are done", () => {
     const done = new Set([runKeyOf(1, "qa")]);
     expect(planRuns([1], ["qa"], done)).toEqual([]);
+  });
+});
+
+describe("planPhase2Runs", () => {
+  const none: Record<GeneratorModel, ReadonlySet<string>> = {
+    llama: new Set(),
+    opus: new Set(),
+  };
+
+  it("returns every model × question pair when nothing is done", () => {
+    const pending = planPhase2Runs(7, ["qa", "qb"], none);
+    expect(pending).toHaveLength(4);
+  });
+
+  it("orders the llama arm before the opus arm (so a smoke run spends nothing)", () => {
+    const pending = planPhase2Runs(7, ["qa", "qb"], none);
+    expect(pending).toEqual([
+      { model: "llama", questionId: "qa" },
+      { model: "llama", questionId: "qb" },
+      { model: "opus", questionId: "qa" },
+      { model: "opus", questionId: "qb" },
+    ]);
+  });
+
+  it("skips only the pairs already completed, per model (resume)", () => {
+    const pending = planPhase2Runs(7, ["qa", "qb"], {
+      llama: new Set([runKeyOf(7, "qa")]),
+      opus: new Set([runKeyOf(7, "qb")]),
+    });
+    expect(pending).toEqual([
+      { model: "llama", questionId: "qb" },
+      { model: "opus", questionId: "qa" },
+    ]);
+  });
+
+  it("keys the done-set by config id, so another config's rows do not count", () => {
+    const pending = planPhase2Runs(7, ["qa"], {
+      llama: new Set([runKeyOf(99, "qa")]),
+      opus: new Set(),
+    });
+    expect(pending).toEqual([
+      { model: "llama", questionId: "qa" },
+      { model: "opus", questionId: "qa" },
+    ]);
+  });
+
+  it("returns nothing when both arms are complete", () => {
+    const done = new Set([runKeyOf(7, "qa")]);
+    expect(planPhase2Runs(7, ["qa"], { llama: done, opus: done })).toEqual([]);
   });
 });
