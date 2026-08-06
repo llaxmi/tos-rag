@@ -14,18 +14,22 @@ export interface FactorBar {
 export function FactorBars({
   items,
   ariaLabel,
+  domainMax,
 }: {
   items: FactorBar[];
   ariaLabel: string;
+  domainMax?: number;
 }) {
   const width = 440;
   const barH = 26;
   const gap = 14;
   const labelW = 86;
   const valueW = 46;
-  const height = items.length * (barH + gap) - gap + 8;
-  const maxX = Math.max(...items.map((i) => i.ci[1])) * 1.05;
+  const axisH = 24;
+  const height = items.length * (barH + gap) - gap + 8 + axisH;
+  const maxX = domainMax ?? Math.max(...items.map((i) => i.ci[1])) * 1.05;
   const x = linearScale([0, maxX], [labelW, width - valueW]);
+  const axisY = height - axisH + 4;
 
   return (
     <svg
@@ -99,6 +103,20 @@ export function FactorBars({
           </g>
         );
       })}
+      <line x1={x(0)} x2={x(maxX)} y1={axisY} y2={axisY} stroke="var(--border)" strokeWidth="1" />
+      {[0, maxX / 2, maxX].map((v, i) => (
+        <text
+          key={v}
+          className="mono"
+          x={x(v)}
+          y={axisY + 15}
+          textAnchor={i === 0 ? "start" : i === 2 ? "end" : "middle"}
+          fontSize="11"
+          fill="var(--muted-foreground)"
+        >
+          {v === 0 ? "0" : v.toFixed(2)}
+        </text>
+      ))}
     </svg>
   );
 }
