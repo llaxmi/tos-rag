@@ -19,6 +19,6 @@ allowBuilds:
   esbuild: true
   onnxruntime-node: true
   prisma: true
-  protobufjs: false
+  protobufjs: true
   sharp: true
   supabase: true
