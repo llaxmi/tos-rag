@@ -21,11 +21,36 @@ pnpm ingest -- --doc github-tos --strategy sentence --size 256
 pnpm ingest -- --doc github-tos --all-configs   # the 15-config Phase 1 sweep
 pnpm ingest -- --dry-run ...                    # chunk + embed + assert, write nothing, no DB needed
 pnpm --filter backend test:live                 # non-hermetic: loads the real embedder (~1.2GB)
+
+pnpm run-phase2                                 # Phase 2: winner × {Llama, Opus} × 30 questions
+
+pnpm analyze                                    # Phase-1 statistics (Python) → analysis_results
+pnpm analyze --dry-run                          # compute + print, write nothing
+pnpm analyze --json                             # full payloads to stdout
+
+pnpm rescore-crag                               # re-score stored evals under the current CRAG rules (dry run)
+pnpm rescore-crag --apply                       # ...and write them
+
+pnpm backfill-metrics                           # fill faithfulness/cosine_sim/cost_usd (dry run)
+pnpm backfill-metrics --phase 2 --apply         # ...one phase at a time; --metric cosine is free
+
+pnpm judge-sample                               # draw the blinded judge-validation sheets
+pnpm judge-kappa                                # Cohen's κ once both sheets are labelled
 ```
 
-`ingest` is deliberately **not** a turbo task — it is a side-effecting one-shot, and a cached
-run that silently no-ops would be a footgun. Note the `--` before flags: pnpm needs it to pass
-them through.
+`ingest`, `run-phase1`/`run-phase2`, `analyze`, and `backfill-metrics` are deliberately **not** turbo tasks — they are
+side-effecting one-shots, and a cached run that silently no-ops would be a footgun. Note the `--`
+before flags on `ingest`: pnpm needs it to pass them through (`analyze` takes its flags directly).
+
+`analyze` needs only the `supabase_db_tos-rag` container running, not the whole Supabase stack.
+
+Python (`analysis/`, uv-managed — run from that directory):
+
+```bash
+uv sync                        # create the pinned 3.12 env
+uv run pytest                  # 141 hermetic tests, no DB or network (~40s)
+uv run analyze --dry-run       # same CLI, without going through pnpm
+```
 
 Per-workspace (run from that directory, or `pnpm --filter <name> <script>`):
 
@@ -73,7 +98,7 @@ Packages are **source-only**: `main`/`exports` point at `src/index.ts` and consu
 
 - **Chunker offset invariant**: `chunk.text === canonical.slice(chunk.charStart, chunk.charEnd)`. Every chunker must preserve exact character offsets — no trimming — because all gold clause spans and retrieval metrics are character offsets into the canonical document. `assertOffsetInvariant` exists for this; it is why the chunkers are hand-rolled rather than delegated to LangChain splitters.
 - **Frozen experiment constants**: k = 5 (amended 2026-07-23; was 8 — see PRD §15 #11), temperature 0, seed 42, `max_tokens` 1024, chunk sizes 128/256/512, zero overlap, one fixed prompt template. These are experimental controls, not tunables — changing one invalidates collected runs and needs a PRD amendment.
-- **No inferential statistics in TypeScript.** Wilcoxon/bootstrap/multiple-comparison correction belong to the planned Python `analysis/` step (PRD §11); the dashboard only formats what `/api/results` returns.
+- **No inferential statistics in TypeScript.** Wilcoxon/bootstrap/multiple-comparison correction live in the Python `analysis/` step (PRD §11); the dashboard only formats what `/api/results` returns. `@stdlib/stats-wilcoxon` silently degrades to a normal approximation with ties or zeros — certain for a metric valued in {−1, 0, +1} — which is why the boundary exists.
 - **Embedding prefixes are asymmetric and must never be persisted.** EmbeddingGemma is trained with `"task: search result | query: "` for queries and `"title: none | text: "` for documents (trailing spaces significant — they live in `EMBED_PREFIXES` in `packages/core`). Using the wrong one degrades retrieval with *no error and no symptom* beyond mediocre results. This is enforced structurally: `Embedder` exposes only `embedQuery`/`embedDocuments`, never a raw `embed`. The prefix is applied to the string handed to the model only — prefixing `chunks.text` would break the offset invariant.
 - **Never mix embedders across ingest and query.** Chunks indexed with one model/dtype and queried with another are not guaranteed to share a vector space. `local` is the only supported `EMBEDDER` value now that Cloudflare is removed (see Known divergences).
 
@@ -102,8 +127,60 @@ it Prisma/Node-only for now — see Known divergences below.
 backend is its only consumer. If the planned `analysis/` step or a second app needs it, move
 `embedder.local.ts` to a `packages/embedding` workspace verbatim.
 
+### The analysis path (Python)
+
+`analysis/` is **not** a pnpm workspace (nothing matches `apps/*` / `packages/*`) and has no
+TypeScript. It is `uv`-managed with `uv.lock` committed and Python pinned to 3.12 — reproducibility
+is a claim the report makes, so the dependency set is locked rather than floating.
+
+It repeats the repo's core split: `stats.py` (pure primitives: Wilcoxon, BCa bootstrap, Holm),
+`phase1.py` and `phase2.py` (pure payload builders — rows in, payloads out) hold everything that
+must be *correct* and are testable with fixtures alone; `db.py` is the only module that touches
+Postgres. It reads `runs`/`evals` via `psycopg` and writes only `analysis_results` — Prisma still
+owns the schema, and no migration is involved.
+
+Things that bite:
+
+- **`assert_phase1_shape` runs before any computation.** A silently missing config or question
+  still yields a plausible-looking ranking, and a wrong ranking is worse than a crash — the same
+  reasoning behind `plan-ingest.ts` asserting full tiling, not just the offset invariant.
+- **Writes replace rows per analysis key**, so the table holds exactly one current row per key and
+  a dashboard reader never has to disambiguate. Re-running is idempotent and, with the fixed
+  bootstrap seed (42), byte-identical.
+- **NULL is never coerced to a number.** Retrieval metrics are NULL for the 4 unanswerable
+  questions, so every payload entry carries its own `n_used`. A missing `crag_score` raises rather
+  than defaulting to 0 — **0 is a real CRAG score** (Missing/abstention), so substituting it would
+  fabricate an abstention that never happened.
+- **Exhaustive permutation costs 2ⁿ per comparison** (~3 s at n = 20). Tests that only exercise
+  logic use a smaller grid; the full 15 × 20 grid is built once per test session.
+- Phase 1 is Llama-only, so `db.py` filters `model = 'llama3.1:8b'`. That filter is what keeps this
+  analysis correct once Phase 2 writes Opus rows against the same config.
+- **Judge validation (`judge.py` + `judge_cli.py`) is half human.** `pnpm judge-sample` writes two
+  blinded sheets to `analysis/judge-validation/`; two annotators label them independently; `pnpm
+  judge-kappa` reads them back and reports inter-annotator κ (PRD §6) and judge-vs-human κ against
+  the §10.3 gate of 0.61. The sheets deliberately carry no verdict, model, or config, and are
+  ordered by run id — an annotator who can see the judge's answer anchors to it. The sample is
+  **balanced by verdict, not proportional**: judged rows are ~83% accurate, and κ collapses toward 0
+  under skewed marginals, so a proportional draw could fail the gate on sampling design alone. That
+  trade-off means κ describes the balanced sample, not the population, and the report must say so.
+  Only judge-decided rows are sampled; rule-decided ones (abstention, exact match) are not opinions.
+- **`phase2.py` pairs by question and never coerces a NULL.** A NULL `faithfulness` is expected
+  (abstentions) and is handled by pairwise deletion with the dropped question ids reported; a NULL
+  `crag_score` raises, because 0 is a real score. The two NULL reasons are different findings and
+  the payload keeps them apart.
+- **Retrieval metrics are reported but never tested.** Both Phase-2 arms share one frozen config,
+  k, embedder and query, so `char_precision`/`char_recall`/`hit_at_8` are identical per question;
+  testing them would add degenerate comparisons that inflate the Holm correction the real metrics
+  pay. `build_retrieval_identity` measures that identity rather than assuming it, because "the
+  difference is generation-only" is Chapter 6's load-bearing claim.
+- **Abstention is detected from the answer text, never from `judge_explanation`.** Since the PRD
+  §15 #12 amendment `cragScore` checks exact match first, so `judge_explanation = 'abstained'` is
+  0 on all 360 rows. `is_abstention` in `phase2.py` is a cross-language copy of `isAbstention` in
+  `packages/core/src/prompts.ts` and must stay in sync with it. It matches only the exact phrase,
+  so §10.4 recall is a lower bound and the payload says so.
+
 ### Known divergences from the PRD
 
-The PRD's layout names `apps/web` and a single `packages/core`; the repo has since split the frontend into `apps/frontend` + `packages/shared` + `packages/ui`. The `analysis/` (Python) directory and `corpus/questions/` do not exist yet, and `corpus/canonical/` now holds two frozen canonicals, `github-tos.md` and `netflix-tou.md` (netflix-tou frozen from the committed PDF). The PDFs in `corpus/` remain archival; the pipeline never parses them. Backend routes `/api/experiment/run-one` and `/admin/ingest` are still unimplemented (ingestion runs as a local script instead); `/api/ask`, `/api/results`, and `/api/health` exist. See PRD §15 for the logged deviations, notably the local embedder and the resulting Node-only backend.
+The PRD's layout names `apps/web` and a single `packages/core`; the repo has since split the frontend into `apps/frontend` + `packages/shared` + `packages/ui`. `corpus/questions/` does not exist yet, and `corpus/canonical/` now holds two frozen canonicals, `github-tos.md` and `netflix-tou.md` (netflix-tou frozen from the committed PDF). The PDFs in `corpus/` remain archival; the pipeline never parses them. Backend routes `/api/experiment/run-one` and `/admin/ingest` are still unimplemented (ingestion runs as a local script instead); `/api/ask`, `/api/results`, and `/api/health` exist. See PRD §15 for the logged deviations, notably the local embedder and the resulting Node-only backend.
 
 Cloudflare is fully removed — no Worker deployment path, no `EMBEDDER=cf`. Llama is served by local Ollama (`OLLAMA_URL`/`OLLAMA_MODEL`). The offline demo deps were removed; the backend now requires `DATABASE_URL`.
