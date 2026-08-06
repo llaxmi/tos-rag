@@ -19,6 +19,7 @@ import { join } from "node:path";
 import { parseQuestionsJsonl } from "@tos-rag/core";
 import { upsertDocument, upsertQuestions } from "@tos-rag/db";
 import { loadCanonical, REPO_ROOT } from "../adapters/canonical";
+import { getFlag } from "./args";
 
 const DOC_IDS = ["github-tos", "netflix-tou"] as const;
 const QUESTIONS_DIR = join(REPO_ROOT, "corpus", "questions");
@@ -29,8 +30,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  const i = argv.indexOf("--doc");
-  const doc = i === -1 ? undefined : argv[i + 1];
+  const doc = getFlag(argv, "--doc");
   return {
     docIds: doc ? [doc] : [...DOC_IDS],
     dryRun: argv.includes("--dry-run"),

@@ -19,13 +19,12 @@
       "persistent": true,
       "env": [
         "PORT",
-        "SUPABASE_URL",
-        "SUPABASE_SERVICE_ROLE_KEY",
-        "CF_ACCOUNT_ID",
-        "CF_API_TOKEN",
+        "DATABASE_URL",
         "ANTHROPIC_API_KEY",
         "EMBEDDER",
-        "EMBEDDER_DTYPE"
+        "EMBEDDER_DTYPE",
+        "OLLAMA_URL",
+        "OLLAMA_MODEL"
       ]
     }
   }

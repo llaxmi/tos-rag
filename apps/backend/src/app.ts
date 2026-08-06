@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   buildRagPrompt,
   CHUNK_SIZES,
+  GENERATOR_MODELS,
   isAbstention,
   STRATEGIES,
   type GenerationResult,
@@ -55,7 +56,7 @@ const AskSchema = z.object({
       message: `chunkSize must be one of ${CHUNK_SIZES.join(", ")}`,
     })
     .optional(),
-  model: z.enum(["llama", "opus"]).optional(),
+  model: z.enum(GENERATOR_MODELS).optional(),
 });
 
 export function createApp(deps: AppDeps) {

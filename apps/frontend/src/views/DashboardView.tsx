@@ -3,11 +3,11 @@ import { getResults } from "../lib/api";
 import {
   formatMeanCI,
   formatUSD,
+  PHASE1_WINNER,
   SAMPLE_COST,
   SAMPLE_LATENCY,
   SAMPLE_PHASE1,
   SAMPLE_PHASE2,
-  SAMPLE_WINNER,
   SIZES,
   STRATEGIES,
   type ConfigRow,
@@ -169,18 +169,25 @@ export function DashboardView() {
   const maxDelta = Math.max(...SAMPLE_PHASE2.map((m) => Math.abs(m.delta)));
   return (
     <>
-      <Hero
-        eyebrow="Results"
-        title="An empirical study of RAG pipeline design"
-        description="15 chunking configurations, two generators, 360 runs — every number below traces back to a stored run in Postgres."
-        bestConfigLabel="Best configuration"
-        bestConfigValue="recursive × 256 tok"
-        stats={[
-          { label: "truthfulness", value: "0.58" },
-          { label: "faithfulness", value: "0.88" },
-          { label: "hit@8", value: "0.93" },
-        ]}
-      />
+      <header className="mb-8">
+        <p className={EYEBROW}>Results</p>
+        <h1>What the experiment measured.</h1>
+        <div className="mt-7 flex flex-wrap items-center gap-8">
+          <ContactSheet rows={rows} winner={PHASE1_WINNER} />
+          <div className="min-w-65 flex-1">
+            <p className="text-ink-soft max-w-[46ch] text-[15px]">
+              15 chunking configurations, two generators, 360 runs — every
+              number below traces back to a stored run in Postgres.
+            </p>
+            <p className="text-muted-foreground mt-4.5 flex items-baseline gap-2.5 text-[11.5px] font-bold uppercase tracking-[0.12em]">
+              Best configuration
+              <span className="text-compare font-mono text-[13px] font-medium normal-case tracking-normal">
+                {PHASE1_WINNER.strategy} × {PHASE1_WINNER.chunkSize} tok
+              </span>
+            </p>
+          </div>
+        </div>
+      </header>
 
       {live === false && (
         <Alert variant="destructive" className="mb-8 border-dashed">
@@ -267,7 +274,8 @@ export function DashboardView() {
                 <TableBody>
                   {rows.map((r) => {
                     const isWinner =
-                      r.strategy === "recursive" && r.chunkSize === 256;
+                      r.strategy === PHASE1_WINNER.strategy &&
+                      r.chunkSize === PHASE1_WINNER.chunkSize;
                     return (
                       <TableRow
                         key={`${r.strategy}-${r.chunkSize}`}

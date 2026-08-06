@@ -2,9 +2,12 @@ import { describe, expect, test } from "vitest";
 import {
   ABSTENTION_TEXT,
   buildRagPrompt,
+  CHUNK_SIZES,
   cosineSimilarity,
   isAbstention,
+  PHASE1_WINNER,
   QuestionRecordSchema,
+  STRATEGIES,
 } from "../src/index";
 
 describe("cosineSimilarity", () => {
@@ -27,6 +30,15 @@ describe("abstention protocol", () => {
     expect(isAbstention("I don't know")).toBe(true);
     expect(isAbstention("  i don't know \n")).toBe(true);
     expect(isAbstention("I don't know, but maybe 30 days.")).toBe(false);
+  });
+  test("trailing sentence punctuation is not meaningful (PRD §10.3 amendment)", () => {
+    // Llama emits "I don't know." and Opus "I don't know"; scoring the same
+    // behaviour differently on a full stop is what this guards against.
+    expect(isAbstention("I don't know.")).toBe(true);
+    expect(isAbstention("I don't know!")).toBe(true);
+    expect(isAbstention("  I don't know...  ")).toBe(true);
+    // Stripping trailing punctuation must not swallow a qualified answer.
+    expect(isAbstention("I don't know, but maybe 30 days")).toBe(false);
   });
   test("canonical abstention text matches its own detector", () => {
     expect(isAbstention(ABSTENTION_TEXT)).toBe(true);
@@ -91,5 +103,16 @@ describe("QuestionRecordSchema", () => {
       expected_answer: "I don't know",
     };
     expect(QuestionRecordSchema.parse(rec)).toEqual(rec);
+  });
+});
+
+describe("PHASE1_WINNER", () => {
+  test("is the Phase 1 winning config (sentence:512, PRD §7)", () => {
+    expect(PHASE1_WINNER).toEqual({ strategy: "sentence", chunkSize: 512 });
+  });
+
+  test("names a real strategy and a frozen chunk size", () => {
+    expect(STRATEGIES).toContain(PHASE1_WINNER.strategy);
+    expect(CHUNK_SIZES).toContain(PHASE1_WINNER.chunkSize);
   });
 });
