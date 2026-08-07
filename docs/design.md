@@ -167,6 +167,45 @@ passes AA — and every heatmap cell prints its value. Darkening the step to
 `#4A73A3` puts white labels at 4.92:1. Any future edit to the ramp has to
 re-check this step first.
 
+### Citation highlights
+
+For the source-document view: each retrieved chunk's span highlighted in place,
+one tint per chunk. There are exactly five because `RETRIEVAL_K` is frozen at 5
+— this is not a palette choice, it tracks the experiment constant.
+
+| Fill | Rule | For |
+|---|---|---|
+| `--cite-1` `#FDF0CD` | `--cite-1-rule` `#B8891A` | Chunk 1 |
+| `--cite-2` `#D9E8FA` | `--cite-2-rule` `#2F6BA8` | Chunk 2 |
+| `--cite-3` `#E6E2F5` | `--cite-3-rule` `#6A5CAB` | Chunk 3 |
+| `--cite-4` `#D8EEE4` | `--cite-4-rule` `#2F7D5C` | Chunk 4 |
+| `--cite-5` `#FAE0DD` | `--cite-5-rule` `#A9483C` | Chunk 5 |
+
+These are not drawn from the sequential ramp — a magnitude encoding is the
+wrong shape for five *unordered* labels — but they're deliberately desaturated
+to sit in the same navy-on-white system rather than the amber/blue/purple of
+the original mockup, which read as a competing palette next to the heatmap.
+
+Document prose sits *on* the highlight, so both `--foreground` and `--ink-soft`
+have to clear AA on every fill, not just one designated ink:
+
+```
+cite-1 vs foreground: 14.57:1 PASS   cite-1 vs ink-soft: 6.11:1 PASS
+cite-2 vs foreground: 13.27:1 PASS   cite-2 vs ink-soft: 5.57:1 PASS
+cite-3 vs foreground: 13.03:1 PASS   cite-3 vs ink-soft: 5.46:1 PASS
+cite-4 vs foreground: 13.58:1 PASS   cite-4 vs ink-soft: 5.70:1 PASS
+cite-5 vs foreground: 13.19:1 PASS   cite-5 vs ink-soft: 5.53:1 PASS
+```
+
+The `-rule` half of each pair is a 2px underline, not a fill: it marks the
+seam where two adjacent highlights touch, since two pale fills abutting each
+other read as one continuous band without it.
+
+Colour is never the only channel here either — the same rule as the win-pill
+and the heatmap. Every highlighted span also carries its citation number in
+the margin, so the mapping from span to source chunk survives colour-blindness
+or a greyscale printout.
+
 ### Rules
 
 - Components reference tokens (as Tailwind utilities), never raw hex. The only

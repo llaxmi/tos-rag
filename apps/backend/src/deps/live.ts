@@ -1,6 +1,8 @@
 import type { RetrievedChunk, Strategy } from "@tos-rag/core";
 import { GENERATION_MAX_TOKENS, MODEL_IDS, PHASE1_WINNER, RETRIEVAL_K } from "@tos-rag/core";
+import type { CanonicalDocument } from "@tos-rag/shared";
 import { matchChunks, prisma, resolveConfigId } from "@tos-rag/db";
+import { loadCanonical } from "../adapters/canonical";
 import type { Embedder } from "../adapters/embedder";
 import type { AppDeps, GenerationResult } from "../app";
 import { generateOllama } from "./ollama";
@@ -43,6 +45,26 @@ export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
     const id = await resolveConfigId(strategy, chunkSize);
     configIds.set(key, id);
     return id;
+  }
+
+  // The canonical files are frozen by protocol (PRD §5), so re-reading and
+  // re-hashing them per request buys nothing. Cached for the process lifetime:
+  // a file edited under a running dev server is not picked up until restart.
+  const documents = new Map<string, CanonicalDocument>();
+  async function cachedDocument(docId: string): Promise<CanonicalDocument> {
+    const cached = documents.get(docId);
+    if (cached !== undefined) return cached;
+    const doc = await loadCanonical(docId); // throws on sha256 drift
+    const entry: CanonicalDocument = {
+      docId: doc.docId,
+      title: doc.title,
+      version: doc.version,
+      sha256: doc.sha256,
+      charLength: doc.text.length,
+      text: doc.text,
+    };
+    documents.set(docId, entry);
+    return entry;
   }
 
   async function generateOpus(prompt: string): Promise<GenerationResult> {
@@ -135,5 +157,7 @@ export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
     },
 
     winningConfig: PHASE1_WINNER,
+
+    loadDocument: cachedDocument,
   };
 }

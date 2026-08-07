@@ -1,4 +1,5 @@
-import type { Evidence } from "@tos-rag/shared";
+import type React from "react";
+import { DOC_LABELS, type Evidence } from "@tos-rag/shared";
 import { CutMark } from "./CutMark";
 import { Badge } from "./primitives/badge";
 import { Card } from "./primitives/card";
@@ -10,27 +11,40 @@ interface Props {
   evidence: Evidence;
   cited: boolean;
   flashed: boolean;
+  /** When present, the whole card becomes a button that focuses this chunk's
+   *  span in the source document. */
+  onSelect?: () => void;
 }
-
-const DOC_LABELS: Record<string, string> = {
-  "github-tos": "GitHub ToS",
-  "netflix-tou": "Netflix ToU",
-};
 
 /**
  * A retrieved chunk rendered as an excerpted clause with its character-offset
  * provenance — chunk.text === canonical.slice(charStart, charEnd). The cut mark
  * draws that span literally (docs/design.md §2).
  */
-export function EvidenceCard({ index, evidence, cited, flashed }: Props) {
+export function EvidenceCard({ index, evidence, cited, flashed, onSelect }: Props) {
   const pct = Math.round(Math.min(1, Math.max(0, evidence.score)) * 100);
   return (
     <Card
       id={`evidence-${index}`}
+      {...(onSelect
+        ? {
+            role: "button" as const,
+            tabIndex: 0,
+            onClick: onSelect,
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect();
+              }
+            },
+            "aria-label": `Show evidence ${index} in the source document`,
+          }
+        : {})}
       className={cn(
         "gap-0 rounded-l-none border-l-[3px] px-3.5 py-3 transition-colors",
         cited ? "border-l-compare" : "border-l-rule-strong",
         flashed && "bg-compare-wash",
+        onSelect && "hover:bg-accent focus-visible:ring-ring/50 cursor-pointer focus-visible:ring-2 focus-visible:outline-none",
       )}
     >
       <div className="text-muted-foreground flex flex-wrap items-baseline gap-2.5 font-mono text-[11.5px]">

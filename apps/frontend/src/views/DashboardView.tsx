@@ -18,6 +18,7 @@ import {
   AlertTitle,
   Badge,
   Card,
+  ContactSheet,
   CutMark,
   FactorBars,
   GENERATION_COLOR,
@@ -99,7 +100,7 @@ function MeanCI({
 
 export function DashboardView() {
   const [live, setLive] = useState<boolean | null>(null);
-  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0]!.id);
 
   useEffect(() => {
     getResults()
@@ -123,7 +124,7 @@ export function DashboardView() {
     const READING_LINE = 110; // px from top of viewport
 
     const updateActive = () => {
-      let current = elements[0].id;
+      let current = elements[0]!.id;
       for (const el of elements) {
         if (el.getBoundingClientRect().top - READING_LINE <= 0) {
           current = el.id;
