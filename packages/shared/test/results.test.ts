@@ -67,6 +67,18 @@ describe("parseAnalysis", () => {
     expect(d.judge!.passes).toBe(true);
   });
 
+  it("preserves a null percentAgreement instead of coercing it to 0", () => {
+    const judgeRow = ROWS.find((r) => r.analysis === "judge_validation")!;
+    const payload = JSON.parse(JSON.stringify(judgeRow.payload)) as {
+      judge_vs_human: Record<string, unknown>;
+    };
+    delete payload.judge_vs_human["percent_agreement"];
+    const d = parseAnalysis([{ analysis: "judge_validation", payload }]);
+    expect(d.judge).not.toBeNull();
+    expect(d.judge!.percentAgreement).toBeNull();
+    expect(d.judge!.kappa).toBeCloseTo(0.92, 3);
+  });
+
   it("returns nulls for every slice when given no rows", () => {
     const d = parseAnalysis([]);
     expect(d.phase1).toBeNull();

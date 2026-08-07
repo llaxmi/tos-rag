@@ -97,7 +97,7 @@ export interface LatencySample {
 export interface JudgeValidation {
   kappa: number;
   kappaCI: [number, number] | null;
-  percentAgreement: number;
+  percentAgreement: number | null;
   n: number;
   band: string;
   threshold: number;
@@ -362,7 +362,7 @@ function parseJudge(payload: unknown): JudgeValidation | null {
   return {
     kappa,
     kappaCI,
-    percentAgreement: num(jvh["percent_agreement"]) ?? 0,
+    percentAgreement: num(jvh["percent_agreement"]),
     n: num(jvh["n"]) ?? 0,
     band: str(jvh["band"]) ?? "",
     threshold,
