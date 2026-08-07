@@ -3,8 +3,10 @@ import { getResults } from "../lib/api";
 import {
   formatMeanCI,
   formatUSD,
+  NO_TEST_METHOD,
   parseAnalysis,
   PHASE1_WINNER,
+  wilcoxonMethodPhrase,
   type ConfigMetrics,
   type DashboardData,
   type FactorLevel,
@@ -91,19 +93,6 @@ function MeanCI({ value, strong }: { value: MetricValue | null; strong?: boolean
 /** " (holm-corrected, α = 0.05)" — but only for the parts the payload carried.
  *  A missing correction or threshold drops its fragment rather than being
  *  filled in from the experiment's constants, which the payload did not state. */
-/** Describes how the §4 p-values were computed, read from the stored
- *  `wilcoxon.method` on the table's first row rather than assumed to be
- *  "exact" — the payload uses seeded Monte Carlo permutation above 20 pairs
- *  (PRD §11), so claiming "exact" unconditionally was false for the n = 30
- *  Phase-2 comparisons. Falls back to a method-agnostic phrase when the
- *  payload didn't carry one. */
-function wilcoxonMethodPhrase(table: PairedTable | null): string {
-  const method = table?.rows.find((r) => r.method)?.method ?? null;
-  return method
-    ? `Wilcoxon signed-rank p-values via ${method} with Holm correction`
-    : "Wilcoxon signed-rank p-values with Holm correction";
-}
-
 function testQualifier({ correction, alpha }: BestVsRest): string {
   const parts = [
     correction ? `${correction}-corrected` : null,
@@ -451,17 +440,29 @@ export function DashboardView() {
             id="sec-4"
             eyebrow="§4 · Phase 2 — Generators"
             title="Claude Opus 4.8 vs Llama 3.1 8B"
-            lead={
+            lead={(() => {
               // The pre-declaration clause below ("fixed before any p-value
               // was seen") is not sourced from the payload — `paired.family`
               // lists the tested metrics but records nothing about when that
               // list was fixed. It states a real property of the experiment
               // design, kept as prose rather than removed, but it is not a
               // read from stored data the way the rest of this string is.
-              data?.phase2
-                ? `Paired comparison over ${data.phase2.nQuestions} questions under the winning config. ${wilcoxonMethodPhrase(data.phase2)}, applied across a metric family fixed before any p-value was seen.`
-                : `Paired comparison under the winning config. ${wilcoxonMethodPhrase(null)}, applied across a metric family fixed before any p-value was seen.`
-            }
+              //
+              // `wilcoxonMethodPhrase` returns null both when the table is
+              // absent and when the table's rows don't all share one real
+              // test method (mixed exhaustive/Monte-Carlo, or a degenerate
+              // all-zero-difference row) — a single sentence cannot name one
+              // method in either case, so the fragment is simply omitted
+              // rather than guessing. Per-row method detail lives in the p
+              // (Holm) column's tooltip instead.
+              const methodFragment = wilcoxonMethodPhrase(data?.phase2 ?? null);
+              const testClause = methodFragment
+                ? `Wilcoxon signed-rank p-values ${methodFragment} with Holm correction`
+                : "Wilcoxon signed-rank p-values with Holm correction";
+              return data?.phase2
+                ? `Paired comparison over ${data.phase2.nQuestions} questions under the winning config. ${testClause}, applied across a metric family fixed before any p-value was seen.`
+                : `Paired comparison under the winning config. ${testClause}, applied across a metric family fixed before any p-value was seen.`;
+            })()}
           >
             {data?.phase2 ? (
               <>
@@ -743,15 +744,26 @@ function PairedTableCard({
                 </TableCell>
                 {showPValue && (
                   <TableCell className={NUM_CELL_LG}>
-                    {m.significant ? (
-                      <span className="bg-seq-1 text-seq-6 rounded px-2 py-0.5 font-semibold">
-                        {m.pHolm.toFixed(3)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {m.pHolm.toFixed(3)}
-                      </span>
-                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={
+                            m.significant
+                              ? "bg-seq-1 text-seq-6 rounded px-2 py-0.5 font-semibold"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {m.pHolm.toFixed(3)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {m.method === NO_TEST_METHOD
+                          ? `No test was run — all ${m.nPairs} paired differences were zero, so p is reported as 1.0 by convention, not computed.`
+                          : m.method
+                            ? `p_raw = ${m.pRaw.toFixed(5)}, via ${m.method}`
+                            : `p_raw = ${m.pRaw.toFixed(5)}`}
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
                 )}
               </TableRow>

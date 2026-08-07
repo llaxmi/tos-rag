@@ -1,9 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { parseAnalysis } from "../src/results";
+import { NO_TEST_METHOD, parseAnalysis, wilcoxonMethodPhrase } from "../src/results";
 import type { AnalysisRow } from "../src/types";
 import fixture from "./fixtures/analysis-results.json";
 
 const ROWS = fixture as AnalysisRow[];
+
+/** A deep copy of the real `phase2_paired` payload, for tests that mutate one
+ *  field (e.g. a metric's `wilcoxon.method`) without hand-rolling a payload
+ *  shape that could drift from what the analysis step actually stores. */
+function phase2Payload(): Record<string, unknown> {
+  const row = ROWS.find((r) => r.analysis === "phase2_paired")!;
+  return JSON.parse(JSON.stringify(row.payload)) as Record<string, unknown>;
+}
+
+function pairedMetrics(payload: Record<string, unknown>): Array<Record<string, unknown>> {
+  const paired = payload["paired"] as Record<string, unknown>;
+  return paired["metrics"] as Array<Record<string, unknown>>;
+}
 
 describe("parseAnalysis", () => {
   it("reads all 15 Phase-1 configurations in rank order", () => {
@@ -159,5 +172,72 @@ describe("parseAnalysis", () => {
   it("survives a malformed payload without throwing", () => {
     const d = parseAnalysis([{ analysis: "phase1_config_ranking", payload: 42 }]);
     expect(d.phase1).toBeNull();
+  });
+});
+
+describe("PairedMetricRow.method", () => {
+  it("reads the stored wilcoxon.method for a row from the real fixture", () => {
+    const d = parseAnalysis(ROWS);
+    const crag = d.phase2!.rows.find((r) => r.metric === "crag_score")!;
+    expect(crag.method).toBe("permutation (monte carlo, seeded)");
+  });
+
+  it("nulls method rather than assuming one when the payload omits it", () => {
+    const payload = phase2Payload();
+    const crag = pairedMetrics(payload).find((m) => m["metric"] === "crag_score")!;
+    delete (crag["wilcoxon"] as Record<string, unknown>)["method"];
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(d.phase2!.rows.find((r) => r.metric === "crag_score")!.method).toBeNull();
+  });
+
+  it.each([
+    "permutation (exhaustive)",
+    "permutation (monte carlo, seeded)",
+    NO_TEST_METHOD,
+  ])("passes through the stats.py method string %s verbatim", (method) => {
+    const payload = phase2Payload();
+    const crag = pairedMetrics(payload).find((m) => m["metric"] === "crag_score")!;
+    (crag["wilcoxon"] as Record<string, unknown>)["method"] = method;
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(d.phase2!.rows.find((r) => r.metric === "crag_score")!.method).toBe(method);
+  });
+});
+
+describe("wilcoxonMethodPhrase", () => {
+  it("returns null for a null table", () => {
+    expect(wilcoxonMethodPhrase(null)).toBeNull();
+  });
+
+  it("names the method when every row in the real fixture shares one real test", () => {
+    const d = parseAnalysis(ROWS);
+    expect(wilcoxonMethodPhrase(d.phase2)).toBe("via permutation (monte carlo, seeded)");
+  });
+
+  it("returns null rather than phrasing 'via degenerate ...' when every row is degenerate", () => {
+    const payload = phase2Payload();
+    for (const m of pairedMetrics(payload)) {
+      (m["wilcoxon"] as Record<string, unknown>)["method"] = NO_TEST_METHOD;
+    }
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(wilcoxonMethodPhrase(d.phase2)).toBeNull();
+  });
+
+  it("returns null rather than naming one method when the table's rows disagree", () => {
+    const payload = phase2Payload();
+    const metrics = pairedMetrics(payload);
+    // Every other row keeps the fixture's "permutation (monte carlo, seeded)";
+    // this one alone crosses into a different real method, as a future run
+    // could if fewer pairs survived NULL pairwise deletion.
+    (metrics[0]!["wilcoxon"] as Record<string, unknown>)["method"] = "permutation (exhaustive)";
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(wilcoxonMethodPhrase(d.phase2)).toBeNull();
+  });
+
+  it("returns null when one row is degenerate and the rest ran a real test", () => {
+    const payload = phase2Payload();
+    const metrics = pairedMetrics(payload);
+    (metrics[0]!["wilcoxon"] as Record<string, unknown>)["method"] = NO_TEST_METHOD;
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(wilcoxonMethodPhrase(d.phase2)).toBeNull();
   });
 });

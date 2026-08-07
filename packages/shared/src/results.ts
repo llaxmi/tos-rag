@@ -96,16 +96,49 @@ export interface PairedMetricRow {
   /** Why no effect size could reach significance at this discordance count.
    *  Null when the analysis did not record a floor. */
   floorNote: string | null;
-  /** How the p-value was obtained — e.g. "permutation (monte carlo, seeded)"
-   *  or "exact". Read verbatim from `wilcoxon.method`; never assume "exact"
-   *  when this is absent. */
+  /** How the p-value was obtained. `stats.py`'s `paired_wilcoxon` reports one
+   *  of three literal strings: `"permutation (exhaustive)"`,
+   *  `"permutation (monte carlo, seeded)"`, or (when every paired difference
+   *  is zero, so there are no signed ranks to permute and no test runs at
+   *  all) `"degenerate (all differences zero)"` with `p = 1.0` by
+   *  convention. Read verbatim from `wilcoxon.method`; scipy never returns
+   *  `"exact"` for this metric family (see `_permutation_method`'s
+   *  docstring), so that word must never be assumed. */
   method: string | null;
 }
+
+/** The literal `method` string `stats.py` reports when a pair set has no
+ *  discordant differences: no permutation test ran, `p = 1.0` is a
+ *  convention, not a computed result. Presentation code must not fold this
+ *  into a "via {method}" sentence — that would claim a method was used when
+ *  none was. */
+export const NO_TEST_METHOD = "degenerate (all differences zero)";
 
 export interface PairedTable {
   label: string;
   nQuestions: number;
   rows: PairedMetricRow[];
+}
+
+/** Describes how a paired table's p-values were computed, for the §4 lead
+ *  sentence. Names the method only when every row that ran a test used the
+ *  *same* real method — a table can legitimately mix methods (rows differ in
+ *  `n_pairs_used` once NULLs are pairwise-deleted, e.g. `faithfulness`
+ *  dropping abstentions, so one row can cross the exhaustive/Monte-Carlo
+ *  boundary while others don't; a row can also land in the degenerate
+ *  no-test case while others don't), and a single sentence cannot state a
+ *  mixed table's methods without naming one that is not universally true.
+ *  Returns null in that case — the caller should show per-row methods (e.g.
+ *  a table tooltip) instead of asserting one in prose. */
+export function wilcoxonMethodPhrase(table: PairedTable | null): string | null {
+  if (!table) return null;
+  const methods = new Set(
+    table.rows.map((r) => r.method).filter((m): m is string => m !== null),
+  );
+  if (methods.size !== 1) return null;
+  const [method] = methods;
+  if (method === NO_TEST_METHOD) return null;
+  return `via ${method}`;
 }
 
 export interface CostRow {
