@@ -26,6 +26,9 @@ importers:
       '@tos-rag/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tos-rag/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2

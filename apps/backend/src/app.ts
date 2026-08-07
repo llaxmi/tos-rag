@@ -12,6 +12,7 @@ import {
   type RetrievedChunk,
   type Strategy,
 } from "@tos-rag/core";
+import type { CanonicalDocument } from "@tos-rag/shared";
 
 // Generator types are owned by @tos-rag/core (PRD §8.6); re-exported here so
 // existing importers (deps/live.ts) keep resolving them from the app module.
@@ -44,11 +45,19 @@ export interface AppDeps {
   ) => Promise<GenerationResult>;
   getAnalysisResults: () => Promise<AnalysisRow[]>;
   winningConfig: { strategy: Strategy; chunkSize: number };
+  /** Reads a frozen canonical document. Implementations must refuse to return
+   *  text whose sha256 has drifted from the manifest — the browser paints
+   *  citation highlights at recorded offsets into exactly this string. */
+  loadDocument: (docId: string) => Promise<CanonicalDocument>;
 }
+
+/** The frozen corpus (PRD §5). Shared by /api/ask and /api/document so a
+ *  document added to one is never silently missing from the other. */
+const DocIdSchema = z.enum(["github-tos", "netflix-tou"]);
 
 const AskSchema = z.object({
   question: z.string().min(1).max(2000),
-  docId: z.enum(["github-tos", "netflix-tou"]).optional(),
+  docId: DocIdSchema.optional(),
   strategy: z.enum(STRATEGIES).optional(),
   chunkSize: z
     .number()
@@ -85,8 +94,9 @@ export function createApp(deps: AppDeps) {
       const evidence = await deps.retrieve(question, { docId, ...config });
       const retrievalMs = Date.now() - t0;
 
+      const prompt = buildRagPrompt(question, evidence);
       const { answer, latencyMs, inputTokens, outputTokens } =
-        await deps.generate(buildRagPrompt(question, evidence), generator);
+        await deps.generate(prompt, generator);
 
       return c.json({
         answer,
@@ -94,12 +104,33 @@ export function createApp(deps: AppDeps) {
         evidence,
         config,
         model: generator,
+        prompt,
         timings: { retrievalMs, generationMs: latencyMs },
         tokens: { input: inputTokens, output: outputTokens },
       });
     } catch (e) {
       return c.json(
         { error: e instanceof Error ? e.message : "pipeline failure" },
+        503,
+      );
+    }
+  });
+
+  app.get("/api/document/:docId", async (c) => {
+    const parsed = DocIdSchema.safeParse(c.req.param("docId"));
+    if (!parsed.success) {
+      return c.json(
+        { error: `Unknown document. Expected one of: ${DocIdSchema.options.join(", ")}` },
+        400,
+      );
+    }
+    try {
+      return c.json(await deps.loadDocument(parsed.data));
+    } catch (e) {
+      // Includes the sha256-drift refusal, whose message explains precisely why
+      // the text can no longer be trusted. Passed through verbatim.
+      return c.json(
+        { error: e instanceof Error ? e.message : "could not load document" },
         503,
       );
     }

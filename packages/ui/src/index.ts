@@ -44,11 +44,15 @@ export {
 export { cn } from "./lib/utils";
 
 // tos-rag components
+export { ChatTurn } from "./ChatTurn";
 export { CutMark } from "./CutMark";
 export { EvidenceCard } from "./EvidenceCard";
+export { EvidenceRail, type RailTab } from "./EvidenceRail";
+export { SourceDocument } from "./SourceDocument";
 export { Swatch } from "./Swatch";
 export { FactorBars, type FactorBar } from "./viz/FactorBars";
 export { Heatmap, HeatmapScale, ContactSheet } from "./viz/Heatmap";
 export { LatencyBoxes } from "./viz/LatencyBoxes";
 export { LatencyStacks, RETRIEVAL_COLOR, GENERATION_COLOR } from "./viz/LatencyStacks";
 export { Hero } from "./Hero";
+export { TracePanel } from "./TracePanel";

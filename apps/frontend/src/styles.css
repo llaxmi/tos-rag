@@ -57,6 +57,24 @@
   --seq-4: #4a73a3;
   --seq-5: #33588a;
   --seq-6: #0b1f3a;
+
+  /* citation highlights — one per retrieved chunk (k = 5, frozen).
+     Fills are pale enough that --foreground and --ink-soft both clear 4.5:1
+     on top of them, because document prose sits *on* the highlight. The -rule
+     pairs are the 2px underline that separates two adjacent highlights, where
+     fill alone would read as one continuous band.
+     Colour is never the only channel: every highlight also carries its
+     citation number in the margin. */
+  --cite-1: #fdf0cd;
+  --cite-1-rule: #b8891a;
+  --cite-2: #d9e8fa;
+  --cite-2-rule: #2f6ba8;
+  --cite-3: #e6e2f5;
+  --cite-3-rule: #6a5cab;
+  --cite-4: #d8eee4;
+  --cite-4-rule: #2f7d5c;
+  --cite-5: #fae0dd;
+  --cite-5-rule: #a9483c;
 }
 
 @theme inline {
@@ -92,6 +110,17 @@
   --color-seq-4: var(--seq-4);
   --color-seq-5: var(--seq-5);
   --color-seq-6: var(--seq-6);
+
+  --color-cite-1: var(--cite-1);
+  --color-cite-1-rule: var(--cite-1-rule);
+  --color-cite-2: var(--cite-2);
+  --color-cite-2-rule: var(--cite-2-rule);
+  --color-cite-3: var(--cite-3);
+  --color-cite-3-rule: var(--cite-3-rule);
+  --color-cite-4: var(--cite-4);
+  --color-cite-4-rule: var(--cite-4-rule);
+  --color-cite-5: var(--cite-5);
+  --color-cite-5-rule: var(--cite-5-rule);
 
   --font-sans: "Cause", system-ui, sans-serif;
   --font-display: "Bricolage Grotesque Variable", "Cause", system-ui, sans-serif;

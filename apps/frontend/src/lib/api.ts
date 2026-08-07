@@ -1,6 +1,7 @@
 import type {
   AnalysisRow,
   AskResponse,
+  CanonicalDocument,
   DocFilter,
   PipelineConfig,
 } from "@tos-rag/shared";
@@ -8,6 +9,7 @@ import type {
 export type {
   AnalysisRow,
   AskResponse,
+  CanonicalDocument,
   DocFilter,
   Evidence,
   GeneratorModel,
@@ -55,4 +57,24 @@ export async function getResults(): Promise<AnalysisRow[] | null> {
   if (!res.ok) return null;
   const body = (await res.json()) as { results: AnalysisRow[] };
   return body.results.length > 0 ? body.results : null;
+}
+
+/** Fetches a frozen canonical document. Throws with the backend's reason —
+ *  including the sha256-drift refusal, which explains why the text can't be
+ *  trusted to carry the recorded citation offsets. */
+export async function getDocument(docId: string): Promise<CanonicalDocument> {
+  const res = await fetch(`/api/document/${docId}`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = ((await res.json()) as { error?: string }).error ?? "";
+    } catch {
+      // non-JSON error body — fall through to the generic message
+    }
+    throw new Error(
+      detail ||
+        `Couldn't load the source document (HTTP ${res.status}). Check that the backend is running, then try again.`,
+    );
+  }
+  return (await res.json()) as CanonicalDocument;
 }
