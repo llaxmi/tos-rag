@@ -37,6 +37,14 @@ function fakeDeps(overrides: Partial<AppDeps> = {}): AppDeps {
       { analysis: "phase1_main", payload: { rows: [] } },
     ],
     winningConfig: { strategy: "sentence", chunkSize: 256 },
+    loadDocument: async (docId: string) => ({
+      docId,
+      title: "GitHub Terms of Service",
+      version: 1,
+      sha256: "a".repeat(64),
+      charLength: 11,
+      text: "Hello world",
+    }),
     ...overrides,
   };
 }
@@ -228,5 +236,70 @@ describe("GET /api/results", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, any>;
     expect(body.results[0]).toMatchObject({ analysis: "phase1_main" });
+  });
+});
+
+describe("GET /api/document/:docId", () => {
+  test("returns the canonical document", async () => {
+    const app = createApp(fakeDeps());
+    const res = await app.request("/api/document/github-tos");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      docId: "github-tos",
+      title: "GitHub Terms of Service",
+      version: 1,
+      charLength: 11,
+      text: "Hello world",
+    });
+  });
+
+  test("rejects a docId outside the frozen corpus", async () => {
+    const app = createApp(fakeDeps());
+    const res = await app.request("/api/document/not-a-doc");
+    expect(res.status).toBe(400);
+    expect((await res.json()) as { error: string }).toHaveProperty("error");
+  });
+
+  // A drifted sha256 means every recorded offset now points at the wrong text,
+  // so the refusal must reach the client rather than be papered over.
+  test("surfaces a load failure as 503 with the reason", async () => {
+    const app = createApp(
+      fakeDeps({
+        loadDocument: async () => {
+          throw new Error("Canonical document 'github-tos' has changed since it was frozen");
+        },
+      }),
+    );
+    const res = await app.request("/api/document/github-tos");
+    expect(res.status).toBe(503);
+    expect((await res.json()) as { error: string }).toMatchObject({
+      error: expect.stringContaining("has changed since it was frozen"),
+    });
+  });
+});
+
+describe("POST /api/ask prompt reporting", () => {
+  test("returns the exact prompt handed to the generator", async () => {
+    let sent = "";
+    const app = createApp(
+      fakeDeps({
+        generate: async (prompt) => {
+          sent = prompt;
+          return {
+            answer: "At least 30 days notice.",
+            inputTokens: 200,
+            outputTokens: 12,
+            latencyMs: 350,
+          };
+        },
+      }),
+    );
+    const res = await app.request(
+      "/api/ask",
+      askRequest({ question: "How much notice before fee changes?" }),
+    );
+    const body = (await res.json()) as Record<string, any>;
+    expect(body.prompt).toBe(sent);
+    expect(body.prompt).toContain("How much notice before fee changes?");
   });
 });

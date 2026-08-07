@@ -26,6 +26,7 @@
     "@huggingface/transformers": "^4.2.0",
     "@tos-rag/core": "workspace:*",
     "@tos-rag/db": "workspace:*",
+    "@tos-rag/shared": "workspace:*",
     "dotenv": "^17.4.2",
     "hono": "^4.12.25",
     "yaml": "^2.9.0",
