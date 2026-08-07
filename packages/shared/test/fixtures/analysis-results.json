@@ -101,6 +101,15 @@
                             "mean": 0.9847368421052631,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9141646785403867,
+                                "high": 0.9943181818181819
+                            },
+                            "mean": 0.9754037081339713,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -201,6 +210,15 @@
                             "mean": 0.8977029914529915,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7604166666666666,
+                                "high": 0.9583333333333333
+                            },
+                            "mean": 0.875,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -296,6 +314,15 @@
                                 "high": 1.0
                             },
                             "mean": 0.9847368421052631,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7957540822670969,
+                                "high": 1.0
+                            },
+                            "mean": 0.9446428571428571,
                             "ci_omitted_reason": null
                         },
                         "retrieval_ms": {
@@ -398,6 +425,15 @@
                             "mean": 0.8787774725274725,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.8364486107816568,
+                                "high": 0.9853896103896104
+                            },
+                            "mean": 0.9416396103896104,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -496,6 +532,15 @@
                                 "high": 0.9602029914529915
                             },
                             "mean": 0.8352029914529915,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 17,
+                            "ci": {
+                                "low": 0.7549019607843137,
+                                "high": 0.9705882352941175
+                            },
+                            "mean": 0.9019607843137254,
                             "ci_omitted_reason": null
                         },
                         "retrieval_ms": {
@@ -598,6 +643,15 @@
                             "mean": 0.875,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 15,
+                            "ci": {
+                                "low": 0.5666666666666667,
+                                "high": 0.9666666666666667
+                            },
+                            "mean": 0.8333333333333334,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -693,6 +747,15 @@
                                 "high": 1.0
                             },
                             "mean": 0.9847368421052631,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9044642857142857,
+                                "high": 0.9910714285714286
+                            },
+                            "mean": 0.9629464285714285,
                             "ci_omitted_reason": null
                         },
                         "retrieval_ms": {
@@ -795,6 +858,15 @@
                             "mean": 0.9375,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.8368055555555556,
+                                "high": 0.9861111111111112
+                            },
+                            "mean": 0.9461805555555556,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -893,6 +965,15 @@
                                 "high": 1.0
                             },
                             "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7931547619047619,
+                                "high": 0.9702380952380953
+                            },
+                            "mean": 0.9077380952380952,
                             "ci_omitted_reason": null
                         },
                         "retrieval_ms": {
@@ -995,6 +1076,15 @@
                             "mean": 0.8787774725274725,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7358583044687937,
+                                "high": 0.9791666666666666
+                            },
+                            "mean": 0.9026515151515151,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -1090,6 +1180,15 @@
                                 "high": 1.0
                             },
                             "mean": 0.9847368421052631,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6827380952380953,
+                                "high": 0.9910714285714286
+                            },
+                            "mean": 0.8931547619047618,
                             "ci_omitted_reason": null
                         },
                         "retrieval_ms": {
@@ -1192,6 +1291,15 @@
                             "mean": 0.8389804639804639,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6979166666666667,
+                                "high": 0.96875
+                            },
+                            "mean": 0.8843005952380952,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -1290,6 +1398,15 @@
                                 "high": 0.9375
                             },
                             "mean": 0.8125,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 15,
+                            "ci": {
+                                "low": 0.8095238095238095,
+                                "high": 1.0
+                            },
+                            "mean": 0.9380952380952381,
                             "ci_omitted_reason": null
                         },
                         "retrieval_ms": {
@@ -1392,6 +1509,15 @@
                             "mean": 0.875,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 15,
+                            "ci": {
+                                "low": 0.6222222222222221,
+                                "high": 0.9555555555555555
+                            },
+                            "mean": 0.8422222222222222,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -1492,6 +1618,15 @@
                             "mean": 0.8093033445079613,
                             "ci_omitted_reason": null
                         },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6145833333333333,
+                                "high": 0.9270833333333334
+                            },
+                            "mean": 0.8125,
+                            "ci_omitted_reason": null
+                        },
                         "retrieval_ms": {
                             "n": 20,
                             "ci": {
@@ -1551,6 +1686,7 @@
                 "squad_f1": "SQuAD token-overlap F1. Low across the board because Llama answers tersely.",
                 "crag_score": "Truthfulness: mean CRAG judge score in {-1,0,+1} (PRD 10.3). Headline metric.",
                 "char_recall": "Char-span recall; NULL for unanswerable questions (PRD 10.1).",
+                "faithfulness": "Answer-vs-context faithfulness; NULL for abstentions and for answers that decompose to zero statements. Descriptive only — not part of the tested family.",
                 "retrieval_ms": "Retrieval latency, milliseconds. Lower is better.",
                 "generation_ms": "Generation latency, milliseconds. Lower is better.",
                 "char_precision": "Char-span precision; NULL for unanswerable questions (PRD 10.1). Intrinsically low: chunks are far larger than gold spans."
@@ -2712,6 +2848,147 @@
                 "faithfulness": "Supported statements / total, against the retrieved context (PRD 10.2). NULL for abstentions and for answers that decompose to zero statements, so it has fewer complete pairs than the other metrics."
             },
             "headline_metric": "crag_score",
+            "cost_effectiveness": {
+                "arms": {
+                    "llama3.1:8b": {
+                        "n_runs": 30,
+                        "input_usd": 0.0,
+                        "n_correct": 24,
+                        "total_usd": 0.0,
+                        "output_usd": 0.0,
+                        "input_share": null,
+                        "recomputed_total_usd": 0.0,
+                        "usd_per_correct_answer": 0.0,
+                        "recomputed_matches_stored": true
+                    },
+                    "claude-opus-4-8": {
+                        "n_runs": 30,
+                        "input_usd": 0.566335,
+                        "n_correct": 29,
+                        "total_usd": 0.67191,
+                        "output_usd": 0.105575,
+                        "input_share": 0.8428733014838298,
+                        "recomputed_total_usd": 0.67191,
+                        "usd_per_correct_answer": 0.023169310344827585,
+                        "recomputed_matches_stored": true
+                    }
+                },
+                "marginal": {
+                    "direction": "claude-opus-4-8 minus llama3.1:8b",
+                    "additional_usd": 0.67191,
+                    "additional_correct_answers": 5,
+                    "usd_per_additional_correct_answer": 0.134382
+                },
+                "outcome_buckets": [
+                    {
+                        "bucket": "both_correct",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": 0.0,
+                            "mean_output_tokens": 30.958333333333332
+                        },
+                        "n_questions": 24,
+                        "question_ids": [
+                            "github-q01",
+                            "github-q02",
+                            "github-q03",
+                            "github-q04",
+                            "github-q05",
+                            "github-q06",
+                            "github-q07",
+                            "github-q08",
+                            "github-q10",
+                            "github-q14",
+                            "github-q15",
+                            "netflix-q01",
+                            "netflix-q02",
+                            "netflix-q03",
+                            "netflix-q04",
+                            "netflix-q05",
+                            "netflix-q06",
+                            "netflix-q07",
+                            "netflix-q08",
+                            "netflix-q09",
+                            "netflix-q12",
+                            "netflix-q13",
+                            "netflix-q14",
+                            "netflix-q15"
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": 0.021166666666666667,
+                            "mean_output_tokens": 92.125
+                        },
+                        "baseline_correct": true,
+                        "treatment_correct": true
+                    },
+                    {
+                        "bucket": "treatment_only",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": 0.0,
+                            "mean_output_tokens": 120.2
+                        },
+                        "n_questions": 5,
+                        "question_ids": [
+                            "github-q11",
+                            "github-q12",
+                            "github-q13",
+                            "netflix-q10",
+                            "netflix-q11"
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": 0.026446000000000004,
+                            "mean_output_tokens": 300.8
+                        },
+                        "baseline_correct": false,
+                        "treatment_correct": true
+                    },
+                    {
+                        "bucket": "baseline_only",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": null,
+                            "mean_output_tokens": null
+                        },
+                        "n_questions": 0,
+                        "question_ids": [
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": null,
+                            "mean_output_tokens": null
+                        },
+                        "baseline_correct": true,
+                        "treatment_correct": false
+                    },
+                    {
+                        "bucket": "neither",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": 0.0,
+                            "mean_output_tokens": 78.0
+                        },
+                        "n_questions": 1,
+                        "question_ids": [
+                            "github-q09"
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": 0.03168,
+                            "mean_output_tokens": 508.0
+                        },
+                        "baseline_correct": false,
+                        "treatment_correct": false
+                    }
+                ],
+                "price_sync_note": "prices are a cross-language copy of MODEL_PRICES in packages/core/src/eval/cost.ts, used only to split a stored cost_usd into input and output halves; recomputed_matches_stored reports the agreement",
+                "input_share_note": "input tokens are fixed by the retrieval configuration (k x chunk size), not by the generator, so an input-dominated bill is controlled by the Phase-1 configuration choice rather than by the choice of model",
+                "correct_definition": "crag_score == 1 (PRD 10.3)",
+                "price_table_usd_per_mtok": {
+                    "llama3.1:8b": {
+                        "input": 0.0,
+                        "output": 0.0
+                    },
+                    "claude-opus-4-8": {
+                        "input": 5.0,
+                        "output": 25.0
+                    }
+                }
+            },
             "token_comparability_note": "input/output token counts are not comparable across arms: each model counts with its own tokenizer, so a byte-identical prompt yields different totals. They are reported per arm for cost arithmetic, not as a comparison"
         },
         "analysis": "phase2_paired"

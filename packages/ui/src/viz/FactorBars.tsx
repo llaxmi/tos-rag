@@ -11,15 +11,7 @@ export interface FactorBar {
  * One hue for magnitude; the whisker sits a few ramp steps darker than the bar
  * so it stays readable where it overlaps (docs/design.md §3).
  */
-export function FactorBars({
-  items,
-  ariaLabel,
-  domainMax,
-}: {
-  items: FactorBar[];
-  ariaLabel: string;
-  domainMax?: number;
-}) {
+export function FactorBars({ items, ariaLabel }: { items: FactorBar[]; ariaLabel: string }) {
   const width = 440;
   const barH = 26;
   const gap = 14;
@@ -27,7 +19,7 @@ export function FactorBars({
   const valueW = 46;
   const axisH = 24;
   const height = items.length * (barH + gap) - gap + 8 + axisH;
-  const maxX = domainMax ?? Math.max(...items.map((i) => i.ci[1])) * 1.05;
+  const maxX = Math.max(...items.map((i) => i.ci[1])) * 1.05;
   const x = linearScale([0, maxX], [labelW, width - valueW]);
   const axisY = height - axisH + 4;
 

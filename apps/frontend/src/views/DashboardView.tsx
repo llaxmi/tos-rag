@@ -6,8 +6,14 @@ import {
   NO_TEST_METHOD,
   parseAnalysis,
   PHASE1_WINNER,
+  RETRIEVAL_K,
   wilcoxonMethodPhrase,
+  formatUnitUSD,
   type ConfigMetrics,
+  type CostBucket,
+  type CostEffectiveness,
+  type CostRow,
+  type CostSplit,
   type DashboardData,
   type FactorLevel,
   type BestVsRest,
@@ -46,9 +52,11 @@ import {
 const METRIC_COLUMNS: Array<{ key: keyof ConfigMetrics; label: string }> = [
   { key: "truthfulness", label: "Truthfulness" },
   { key: "faithfulness", label: "Faithfulness" },
-  { key: "charRecall", label: "Char R@5" },
-  { key: "charPrecision", label: "Char P@5" },
-  { key: "hitRate", label: "Hit@5" },
+  // k is a frozen control that has already been amended once (8 → 5, PRD §15
+  // #11); interpolate it so the headers cannot outlive the constant.
+  { key: "charRecall", label: `Char R@${RETRIEVAL_K}` },
+  { key: "charPrecision", label: `Char P@${RETRIEVAL_K}` },
+  { key: "hitRate", label: `Hit@${RETRIEVAL_K}` },
   { key: "squadF1", label: "SQuAD F1" },
 ];
 
@@ -125,6 +133,173 @@ function NoData({ what, failed }: { what: string; failed?: boolean }) {
   );
 }
 
+/** One arm's total token spend, with a bar scaled against the costlier arm. */
+function CostCard({
+  row,
+  maxCost,
+  costNote,
+}: {
+  row: CostRow;
+  maxCost: number;
+  costNote: string | null;
+}) {
+  const isClaude = row.model.startsWith("claude");
+  return (
+    <Card className="gap-0 p-6">
+      <p className="text-[15px]">
+        <span className="text-foreground font-medium">{row.name}</span>
+        {row.note && <span className="text-muted-foreground ml-1.5">{row.note}</span>}
+      </p>
+      <p className="text-foreground mt-3 font-mono text-[38px] font-bold leading-none">
+        {row.costUSD === 0 ? "$0.00" : formatUSD(row.costUSD)}
+      </p>
+      {/* A zero-cost arm gets a sentence, not a zero-width bar:
+          "no marginal API cost" is not the same as "cheap". */}
+      {row.costUSD === 0 ? (
+        <p className="text-ink-soft mt-4 text-[13px] leading-relaxed">
+          {costNote ?? "Served locally — no marginal API cost is billed per run."}
+        </p>
+      ) : (
+        <div className="bg-border mt-5 h-2 w-full overflow-hidden rounded-full">
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${maxCost > 0 ? Math.max((row.costUSD / maxCost) * 100, 1.5) : 0}%`,
+              background: isClaude ? "var(--compare)" : "var(--seq-6)",
+            }}
+          />
+        </div>
+      )}
+      <div className="text-muted-foreground mt-4 flex gap-6 font-mono text-[12.5px]">
+        <span>
+          {row.inputTokens.toLocaleString()} <span className="text-ink-soft">in</span>
+        </span>
+        <span>
+          {row.outputTokens.toLocaleString()} <span className="text-ink-soft">out</span>
+        </span>
+      </div>
+    </Card>
+  );
+}
+
+/** The headline of §6: what the paid arm's bill bought, not what it was.
+ *
+ *  "The paid model costs more" is true by construction. The number that carries
+ *  information is the price of the accuracy it buys, so that is what is set in
+ *  display type and the totals stay in the cards above. */
+function MarginalCostCard({ ce }: { ce: CostEffectiveness }) {
+  const bought = ce.additionalCorrect > 0 && ce.usdPerAdditionalCorrect !== null;
+  return (
+    <Card className="gap-0 p-6">
+      <p className={EYEBROW}>What the spend buys</p>
+      {bought ? (
+        <>
+          <p className="text-foreground font-mono text-[38px] font-bold leading-none">
+            {formatUnitUSD(ce.usdPerAdditionalCorrect!)}
+          </p>
+          <p className="text-ink-soft mt-3 text-[13.5px] leading-relaxed">
+            per additional correct answer — {formatUSD(ce.additionalUSD)} bought{" "}
+            {ce.additionalCorrect} correct{" "}
+            {ce.additionalCorrect === 1 ? "answer" : "answers"} the local arm did
+            not get.
+          </p>
+        </>
+      ) : (
+        // No division when the paid arm bought nothing: an infinite or negative
+        // unit price would read as a measurement.
+        <p className="text-ink-soft mt-1 text-[13.5px] leading-relaxed">
+          The paid arm bought no additional correct answers, so there is no
+          marginal price per correction to state.
+        </p>
+      )}
+      <div className="border-border mt-5 flex flex-col gap-2 border-t pt-4">
+        {ce.perCorrect.map((r) => (
+          <div key={r.model} className="flex items-baseline justify-between gap-4">
+            <span className="text-ink-soft text-[13px]">{r.name}</span>
+            <span className="text-ink-soft font-mono text-[12.5px]">
+              {r.usdPerCorrect === null ? "—" : formatUnitUSD(r.usdPerCorrect)}
+              <span className="text-muted-foreground ml-2">
+                ({r.nCorrect}/{r.nRuns} correct)
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+/** Which half of the paid arm's bill is retrieved context and which is the
+ *  answer. The split is the actionable part of §6: input length is set by the
+ *  Phase-1 retrieval configuration, not by the generator. */
+function CostSplitCard({ split, note }: { split: CostSplit; note: string | null }) {
+  const inputPct = (split.inputShare ?? 0) * 100;
+  return (
+    <Card className="gap-0 p-6">
+      <p className={EYEBROW}>Where the money goes · {split.name}</p>
+      <p className="text-foreground font-mono text-[38px] font-bold leading-none">
+        {inputPct.toFixed(1)}%
+      </p>
+      <p className="text-ink-soft mt-3 text-[13.5px]">
+        of the bill is retrieved context, not generated text.
+      </p>
+      <div className="bg-border mt-5 flex h-2 w-full overflow-hidden rounded-full">
+        <div style={{ width: `${inputPct}%`, background: "var(--compare)" }} />
+        <div style={{ width: `${100 - inputPct}%`, background: "var(--seq-6)" }} />
+      </div>
+      <div className="text-ink-soft mt-3 flex gap-6 text-[12.5px]">
+        <Swatch color="var(--compare)">input {formatUSD(split.inputUSD)}</Swatch>
+        <Swatch color="var(--seq-6)">output {formatUSD(split.outputUSD)}</Swatch>
+      </div>
+      {note && (
+        <p className="bg-muted text-ink-soft mt-5 rounded-lg p-4 text-[13px] leading-relaxed">
+          {note}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/** Answer length per arm, grouped by which arms answered correctly. Both arms
+ *  receive byte-identical retrieved context (§4), so output length is the only
+ *  per-question quantity where a cross-arm comparison means anything. */
+function OutcomeBucketTable({ buckets }: { buckets: CostBucket[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="text-muted-foreground text-[11px] uppercase tracking-[0.06em]">
+            Outcome
+          </TableHead>
+          <TableHead className={HEAD_CELL}>Questions</TableHead>
+          <TableHead className={HEAD_CELL}>Opus out-tok</TableHead>
+          <TableHead className={HEAD_CELL}>Llama out-tok</TableHead>
+          <TableHead className={HEAD_CELL}>Opus $/run</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {buckets.map((b) => (
+          <TableRow key={b.bucket}>
+            <TableCell className="text-[13px]">{b.label}</TableCell>
+            <TableCell className={NUM_CELL}>{b.nQuestions}</TableCell>
+            {/* An empty bucket has no mean answer length. A dash, never a 0 —
+                0 would read as "the model answered with nothing". */}
+            <TableCell className={NUM_CELL}>
+              {b.opusOutputTokens === null ? "—" : Math.round(b.opusOutputTokens)}
+            </TableCell>
+            <TableCell className={NUM_CELL}>
+              {b.llamaOutputTokens === null ? "—" : Math.round(b.llamaOutputTokens)}
+            </TableCell>
+            <TableCell className={NUM_CELL}>
+              {b.opusCostUSD === null ? "—" : formatUnitUSD(b.opusCostUSD)}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
 export function DashboardView() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -162,12 +337,25 @@ export function DashboardView() {
       setActiveSection(current);
     };
 
+    // Coalesce into one frame: updateActive reads getBoundingClientRect on
+    // every section, so running it per scroll event forces a layout flush
+    // dozens of times a second on a page holding several SVG charts.
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        updateActive();
+      });
+    };
+
     updateActive();
-    window.addEventListener("scroll", updateActive, { passive: true });
-    window.addEventListener("resize", updateActive);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     return () => {
-      window.removeEventListener("scroll", updateActive);
-      window.removeEventListener("resize", updateActive);
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, []);
 
@@ -184,6 +372,8 @@ export function DashboardView() {
 
   const byStrategy = toBars(data?.byStrategy ?? null);
   const bySize = toBars(data?.bySize ?? null, " tok");
+  const floorNote = data?.phase2?.rows.find((r) => r.floorNote)?.floorNote ?? null;
+  const maxCost = data?.cost ? Math.max(...data.cost.map((c) => c.costUSD)) : 0;
 
   return (
     <>
@@ -471,9 +661,9 @@ export function DashboardView() {
                   <Swatch className="bg-seq-5">significant at α = 0.05</Swatch>
                   <Swatch className="bg-seq-2">not significant</Swatch>
                 </div>
-                {data.phase2.rows.find((r) => r.floorNote)?.floorNote && (
+                {floorNote && (
                   <p className="bg-muted text-ink-soft mt-4 rounded-lg p-4 text-[13px] leading-relaxed">
-                    {data.phase2.rows.find((r) => r.floorNote)!.floorNote}
+                    {floorNote}
                   </p>
                 )}
               </>
@@ -583,63 +773,20 @@ export function DashboardView() {
           <Section
             id="sec-6"
             eyebrow="§6 · Operational"
-            title="Token cost"
-            lead="Total tokens across all Phase 2 runs, converted at published prices."
+            title="Cost, against what it buys"
+            lead="Total tokens across all Phase 2 runs, converted at published prices — then divided by the answers each arm got right."
           >
             {data?.cost ? (
               <>
                 <div className="flex flex-col gap-5">
-                  {(() => {
-                    const costs = data.cost;
-                    const maxCost = Math.max(...costs.map((c) => c.costUSD));
-                    return costs.map((r) => {
-                      const isClaude = r.model.startsWith("claude");
-                      const [name, note] = r.label.includes("(")
-                        ? [r.label.split(" (")[0], `(${r.label.split(" (")[1]}`]
-                        : [r.label, null];
-                      return (
-                        <Card key={r.model} className="gap-0 p-6">
-                          <p className="text-[15px]">
-                            <span className="text-foreground font-medium">{name}</span>
-                            {note && (
-                              <span className="text-muted-foreground ml-1.5">{note}</span>
-                            )}
-                          </p>
-                          <p className="text-foreground mt-3 font-mono text-[38px] font-bold leading-none">
-                            {r.costUSD === 0 ? "$0.00" : formatUSD(r.costUSD)}
-                          </p>
-                          {/* A zero-cost arm gets a sentence, not a zero-width bar:
-                              "no marginal API cost" is not the same as "cheap". */}
-                          {r.costUSD === 0 ? (
-                            <p className="text-ink-soft mt-4 text-[13px] leading-relaxed">
-                              {data.costNote ??
-                                "Served locally — no marginal API cost is billed per run."}
-                            </p>
-                          ) : (
-                            <div className="bg-border mt-5 h-2 w-full overflow-hidden rounded-full">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${maxCost > 0 ? Math.max((r.costUSD / maxCost) * 100, 1.5) : 0}%`,
-                                  background: isClaude ? "var(--compare)" : "var(--seq-6)",
-                                }}
-                              />
-                            </div>
-                          )}
-                          <div className="text-muted-foreground mt-4 flex gap-6 font-mono text-[12.5px]">
-                            <span>
-                              {r.inputTokens.toLocaleString()}{" "}
-                              <span className="text-ink-soft">in</span>
-                            </span>
-                            <span>
-                              {r.outputTokens.toLocaleString()}{" "}
-                              <span className="text-ink-soft">out</span>
-                            </span>
-                          </div>
-                        </Card>
-                      );
-                    });
-                  })()}
+                  {data.cost.map((r) => (
+                    <CostCard
+                      key={r.model}
+                      row={r}
+                      maxCost={maxCost}
+                      costNote={data.costNote}
+                    />
+                  ))}
                 </div>
                 {data.tokenComparabilityNote && (
                   <p className="bg-muted text-ink-soft mt-5 rounded-lg p-4 text-[13px] leading-relaxed">
@@ -649,6 +796,35 @@ export function DashboardView() {
               </>
             ) : (
               <NoData what="Phase-2 token cost" failed={loadFailed} />
+            )}
+
+            {/* The cost-effectiveness payload is a later addition, so it is
+                nullable independently: a database holding only the older
+                payload still renders the totals above. */}
+            {data?.costEffectiveness ? (
+              <div className="mt-5 flex flex-col gap-5">
+                <MarginalCostCard ce={data.costEffectiveness} />
+                {data.costEffectiveness.split && (
+                  <CostSplitCard
+                    split={data.costEffectiveness.split}
+                    note={data.costEffectiveness.inputShareNote}
+                  />
+                )}
+                {data.costEffectiveness.buckets.length > 0 && (
+                  <Card className="gap-0 p-6">
+                    <p className={EYEBROW}>Where the extra spend lands</p>
+                    <p className="text-ink-soft mb-4 text-[13.5px] leading-relaxed">
+                      Both arms receive byte-identical retrieved context, so answer
+                      length is the only per-question quantity worth comparing.
+                    </p>
+                    <OutcomeBucketTable buckets={data.costEffectiveness.buckets} />
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <div className="mt-5">
+                <NoData what="Phase-2 cost effectiveness" failed={loadFailed} />
+              </div>
             )}
           </Section>
         </div>

@@ -6,9 +6,10 @@
  * payload does not appear on the dashboard (PRD §12).
  */
 
-import { CHUNK_SIZES, PHASE1_WINNER, STRATEGIES } from "@tos-rag/core";
+import { CHUNK_SIZES, MODEL_IDS, PHASE1_WINNER, STRATEGIES } from "@tos-rag/core";
 
 import type { AnalysisRow } from "./types";
+import { MODEL_LABELS } from "./types";
 
 // The frozen experimental controls live in @tos-rag/core; re-exported here so
 // the dashboard's grid axes stay in lockstep with the pipeline.
@@ -148,11 +149,62 @@ export function wilcoxonMethodPhrase(table: PairedTable | null): string | null {
 
 export interface CostRow {
   model: string;
-  label: string;
+  /** Model display name, and the parenthetical qualifier the view renders in
+   *  muted ink beside it — kept as two fields so the view never re-parses a
+   *  composed string. */
+  name: string;
+  note: string | null;
   inputTokens: number;
   outputTokens: number;
   costUSD: number;
   nPricedRuns: number;
+}
+
+/** One arm's bill divided by the answers it got right, plus the raw counts the
+ *  ratio is built from — a reader has to be able to see that $0.02 per correct
+ *  answer is 29 of 30, not 1 of 1. */
+export interface CostPerCorrect {
+  model: string;
+  name: string;
+  nCorrect: number;
+  nRuns: number;
+  costUSD: number;
+  /** Null only when the arm got nothing right; 0 is a real value for a free arm. */
+  usdPerCorrect: number | null;
+}
+
+/** The paid arm's bill split into the half fixed by retrieval (input) and the
+ *  half the generator controls (output). */
+export interface CostSplit {
+  model: string;
+  name: string;
+  inputUSD: number;
+  outputUSD: number;
+  /** Null for a $0 arm — a free bill has no meaningful split. */
+  inputShare: number | null;
+}
+
+/** Per-question outcomes, grouped by which arms answered correctly. */
+export interface CostBucket {
+  bucket: string;
+  label: string;
+  nQuestions: number;
+  llamaOutputTokens: number | null;
+  opusOutputTokens: number | null;
+  opusCostUSD: number | null;
+}
+
+export interface CostEffectiveness {
+  perCorrect: CostPerCorrect[];
+  /** Opus minus Llama. Negative or zero means the paid arm bought no accuracy. */
+  additionalCorrect: number;
+  additionalUSD: number;
+  /** Null when `additionalCorrect <= 0` — the payload declines to divide, and so
+   *  does the view, rather than rendering an infinite or negative unit price. */
+  usdPerAdditionalCorrect: number | null;
+  split: CostSplit | null;
+  buckets: CostBucket[];
+  inputShareNote: string | null;
 }
 
 export interface LatencySample {
@@ -186,6 +238,7 @@ export interface DashboardData {
   heldOut: PairedTable | null;
   latency: LatencySample[] | null;
   cost: CostRow[] | null;
+  costEffectiveness: CostEffectiveness | null;
   costNote: string | null;
   tokenComparabilityNote: string | null;
   judge: JudgeValidation | null;
@@ -308,8 +361,10 @@ function parseFactor(payload: unknown): FactorLevel[] | null {
   return levels.length > 0 ? levels : null;
 }
 
-const LLAMA = "llama3.1:8b";
-const OPUS = "claude-opus-4-8";
+// The arm keys the payloads are keyed by. Taken from core rather than retyped:
+// a drift here yields null arms and silently blank §4–§6 rather than an error.
+const LLAMA = MODEL_IDS.llama;
+const OPUS = MODEL_IDS.opus;
 
 const METRIC_LABELS: Record<string, string> = {
   crag_score: "Truthfulness",
@@ -375,9 +430,9 @@ function parseLatency(arms: unknown): LatencySample[] | null {
 function parseCost(arms: unknown): CostRow[] | null {
   if (!isRecord(arms)) return null;
   const out: CostRow[] = [];
-  for (const [key, label] of [
-    [LLAMA, "Llama 3.1 8B (Ollama, local)"],
-    [OPUS, "Claude Opus 4.8"],
+  for (const [key, name, note] of [
+    [LLAMA, MODEL_LABELS.llama, "(Ollama, local)"],
+    [OPUS, MODEL_LABELS.opus, null],
   ] as const) {
     const arm = arms[key];
     const cost = isRecord(arm) ? arm["cost"] : null;
@@ -386,7 +441,8 @@ function parseCost(arms: unknown): CostRow[] | null {
     if (costUSD === null) continue;
     out.push({
       model: key,
-      label,
+      name,
+      note,
       costUSD,
       inputTokens: num(cost["input_tokens"]) ?? 0,
       outputTokens: num(cost["output_tokens"]) ?? 0,
@@ -394,6 +450,93 @@ function parseCost(arms: unknown): CostRow[] | null {
     });
   }
   return out.length > 0 ? out : null;
+}
+
+/** Bucket labels. The payload names buckets by role (`treatment_only`); the
+ *  dashboard names them by model, because a reader looking at the table has no
+ *  reason to know which arm is the treatment. */
+const BUCKET_LABELS: Record<string, string> = {
+  both_correct: "Both correct",
+  treatment_only: `${MODEL_LABELS.opus} only`,
+  baseline_only: `${MODEL_LABELS.llama} only`,
+  neither: "Neither correct",
+};
+
+function parseCostBuckets(raw: unknown): CostBucket[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CostBucket[] = [];
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+    const bucket = str(entry["bucket"]);
+    const nQuestions = num(entry["n_questions"]);
+    if (bucket === null || nQuestions === null) continue;
+    const llama = isRecord(entry[LLAMA]) ? entry[LLAMA] : {};
+    const opus = isRecord(entry[OPUS]) ? entry[OPUS] : {};
+    out.push({
+      bucket,
+      label: BUCKET_LABELS[bucket] ?? bucket,
+      nQuestions,
+      // Left null rather than defaulted to 0: an empty bucket has no mean answer
+      // length, and 0 would read as "the model answered with nothing".
+      llamaOutputTokens: num(llama["mean_output_tokens"]),
+      opusOutputTokens: num(opus["mean_output_tokens"]),
+      opusCostUSD: num(opus["mean_usd_per_run"]),
+    });
+  }
+  return out;
+}
+
+/** Reads the `cost_effectiveness` payload — cost expressed against quality.
+ *
+ *  Nothing here divides: every ratio is read from the payload, which already
+ *  decided when a ratio is undefined (no correct answers, no additional correct
+ *  answers, a $0 bill with no meaningful input share). Recomputing them in the
+ *  view could disagree with the report, which cites the stored numbers. */
+function parseCostEffectiveness(raw: unknown): CostEffectiveness | null {
+  if (!isRecord(raw)) return null;
+  const arms = raw["arms"];
+  if (!isRecord(arms)) return null;
+
+  const perCorrect: CostPerCorrect[] = [];
+  let split: CostSplit | null = null;
+  for (const [key, name] of [
+    [LLAMA, MODEL_LABELS.llama],
+    [OPUS, MODEL_LABELS.opus],
+  ] as const) {
+    const arm = arms[key];
+    if (!isRecord(arm)) continue;
+    const costUSD = num(arm["total_usd"]);
+    const nCorrect = num(arm["n_correct"]);
+    const nRuns = num(arm["n_runs"]);
+    if (costUSD === null || nCorrect === null || nRuns === null) continue;
+    perCorrect.push({
+      model: key,
+      name,
+      nCorrect,
+      nRuns,
+      costUSD,
+      usdPerCorrect: num(arm["usd_per_correct_answer"]),
+    });
+    // Only a priced arm gets a split; a $0 bill has nothing to divide.
+    const inputUSD = num(arm["input_usd"]);
+    const outputUSD = num(arm["output_usd"]);
+    const inputShare = num(arm["input_share"]);
+    if (inputUSD !== null && outputUSD !== null && inputShare !== null) {
+      split = { model: key, name, inputUSD, outputUSD, inputShare };
+    }
+  }
+  if (perCorrect.length === 0) return null;
+
+  const marginal = isRecord(raw["marginal"]) ? raw["marginal"] : {};
+  return {
+    perCorrect,
+    additionalCorrect: num(marginal["additional_correct_answers"]) ?? 0,
+    additionalUSD: num(marginal["additional_usd"]) ?? 0,
+    usdPerAdditionalCorrect: num(marginal["usd_per_additional_correct_answer"]),
+    split,
+    buckets: parseCostBuckets(raw["outcome_buckets"]),
+    inputShareNote: str(raw["input_share_note"]),
+  };
 }
 
 /** The `subsets` array carries a `held_out` entry with its own win counts and
@@ -469,7 +612,7 @@ function parseJudge(payload: unknown): JudgeValidation | null {
 
 const EMPTY: DashboardData = {
   phase1: null, winner: null, bestVsRest: null, byStrategy: null, bySize: null,
-  phase2: null, heldOut: null, latency: null, cost: null,
+  phase2: null, heldOut: null, latency: null, cost: null, costEffectiveness: null,
   costNote: null, tokenComparabilityNote: null, judge: null,
 };
 
@@ -507,6 +650,7 @@ export function parseAnalysis(rows: AnalysisRow[]): DashboardData {
     heldOut: p2rec ? parseHeldOut(p2rec) : null,
     latency: parseLatency(arms),
     cost: parseCost(arms),
+    costEffectiveness: p2rec ? parseCostEffectiveness(p2rec["cost_effectiveness"]) : null,
     costNote: p2rec ? str(p2rec["cost_note"]) : null,
     tokenComparabilityNote: p2rec ? str(p2rec["token_comparability_note"]) : null,
     judge: parseJudge(by.get("judge_validation")),

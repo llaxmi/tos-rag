@@ -18,7 +18,6 @@ const extent = (rows: ConfigRow[]): [number, number] => {
   return [Math.min(...values), Math.max(...values)];
 };
 
-/** 5×3 strategy-by-size heatmap of Truthfulness (PRD §12.2). */
 /**
  * 5×3 strategy-by-size heatmap of Truthfulness (PRD §12.2).
  * `highlight` rings one cell in dark navy — used to call out the config

@@ -175,6 +175,88 @@ describe("parseAnalysis", () => {
   });
 });
 
+describe("cost effectiveness", () => {
+  it("reads cost per correct answer for both arms from the real fixture", () => {
+    const ce = parseAnalysis(ROWS).costEffectiveness!;
+    expect(ce).not.toBeNull();
+
+    const opus = ce.perCorrect.find((r) => r.model.startsWith("claude"))!;
+    expect(opus.nCorrect).toBe(29);
+    expect(opus.nRuns).toBe(30);
+    expect(opus.usdPerCorrect).toBeCloseTo(0.0232, 4);
+
+    // A locally served arm is $0.00 per correct answer — a real measurement,
+    // not a missing one, so it must not come back null.
+    const llama = ce.perCorrect.find((r) => !r.model.startsWith("claude"))!;
+    expect(llama.nCorrect).toBe(24);
+    expect(llama.usdPerCorrect).toBe(0);
+  });
+
+  it("reads the marginal price of the accuracy the paid arm buys", () => {
+    const ce = parseAnalysis(ROWS).costEffectiveness!;
+    expect(ce.additionalCorrect).toBe(5);
+    expect(ce.additionalUSD).toBeCloseTo(0.6719, 4);
+    expect(ce.usdPerAdditionalCorrect).toBeCloseTo(0.1344, 4);
+  });
+
+  it("reads the input/output split for the priced arm only", () => {
+    const ce = parseAnalysis(ROWS).costEffectiveness!;
+    expect(ce.split).not.toBeNull();
+    // The free arm has no meaningful split, so the priced one is what is kept.
+    expect(ce.split!.model.startsWith("claude")).toBe(true);
+    expect(ce.split!.inputShare).toBeCloseTo(0.843, 3);
+    expect(ce.split!.inputUSD).toBeCloseTo(0.5663, 4);
+    expect(ce.split!.outputUSD).toBeCloseTo(0.1056, 4);
+  });
+
+  it("reads the outcome buckets and labels them by model, not by role", () => {
+    const ce = parseAnalysis(ROWS).costEffectiveness!;
+    expect(ce.buckets.map((b) => b.bucket)).toEqual([
+      "both_correct", "treatment_only", "baseline_only", "neither",
+    ]);
+    expect(ce.buckets.reduce((n, b) => n + b.nQuestions, 0)).toBe(30);
+
+    const byBucket = Object.fromEntries(ce.buckets.map((b) => [b.bucket, b]));
+    expect(byBucket["treatment_only"]!.label).toBe("Claude Opus 4.8 only");
+    expect(byBucket["treatment_only"]!.nQuestions).toBe(5);
+    expect(byBucket["treatment_only"]!.opusOutputTokens).toBeCloseTo(300.8, 1);
+  });
+
+  it("leaves an empty bucket's answer length null rather than zero", () => {
+    // 0.0 mean output tokens would read as "the model answered with nothing"
+    // instead of "no question landed in this bucket".
+    const ce = parseAnalysis(ROWS).costEffectiveness!;
+    const empty = ce.buckets.find((b) => b.bucket === "baseline_only")!;
+    expect(empty.nQuestions).toBe(0);
+    expect(empty.opusOutputTokens).toBeNull();
+    expect(empty.opusCostUSD).toBeNull();
+  });
+
+  it("declines to state a marginal price when the paid arm bought no accuracy", () => {
+    const payload = phase2Payload();
+    const ce = payload["cost_effectiveness"] as Record<string, unknown>;
+    ce["marginal"] = {
+      additional_correct_answers: 0,
+      additional_usd: 0.6719,
+      usd_per_additional_correct_answer: null,
+    };
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(d.costEffectiveness!.additionalCorrect).toBe(0);
+    expect(d.costEffectiveness!.usdPerAdditionalCorrect).toBeNull();
+  });
+
+  it("nulls the whole slice when the payload has no cost_effectiveness key", () => {
+    // An older stored payload, computed before this analysis existed, must empty
+    // its own part of the section rather than break the rest of the page.
+    const payload = phase2Payload();
+    delete payload["cost_effectiveness"];
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(d.costEffectiveness).toBeNull();
+    expect(d.cost).not.toBeNull();
+    expect(d.phase2).not.toBeNull();
+  });
+});
+
 describe("PairedMetricRow.method", () => {
   it("reads the stored wilcoxon.method for a row from the real fixture", () => {
     const d = parseAnalysis(ROWS);
