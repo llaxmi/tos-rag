@@ -8,6 +8,7 @@ import {
   type ConfigMetrics,
   type DashboardData,
   type FactorLevel,
+  type BestVsRest,
   type MetricValue,
   type PairedTable,
 } from "@tos-rag/shared";
@@ -86,6 +87,17 @@ function MeanCI({ value, strong }: { value: MetricValue | null; strong?: boolean
       </div>
     </div>
   );
+}
+
+/** " (holm-corrected, α = 0.05)" — but only for the parts the payload carried.
+ *  A missing correction or threshold drops its fragment rather than being
+ *  filled in from the experiment's constants, which the payload did not state. */
+function testQualifier({ correction, alpha }: BestVsRest): string {
+  const parts = [
+    correction ? `${correction}-corrected` : null,
+    alpha !== null ? `α = ${alpha}` : null,
+  ].filter((p): p is string => p !== null);
+  return parts.length > 0 ? ` (${parts.join(", ")})` : "";
 }
 
 /** Shown in place of a figure whose payload has not been computed. The
@@ -374,8 +386,7 @@ export function DashboardView() {
                         Separability is measured, not eyeballed: the winner was
                         tested against each of the other{" "}
                         {data.bestVsRest.nComparisons} configurations with paired
-                        Wilcoxon tests, {data.bestVsRest.correction}-corrected at
-                        α = {data.bestVsRest.alpha}, of which{" "}
+                        Wilcoxon tests{testQualifier(data.bestVsRest)}, of which{" "}
                         {data.bestVsRest.nSignificant} reached significance. The
                         analysis records it as: “{data.bestVsRest.interpretation}”
                       </p>
@@ -478,9 +489,8 @@ export function DashboardView() {
                   <p className="text-ink-soft text-[13px] leading-relaxed">
                     Both arms retrieve the same chunks — same config, same k, same
                     embedder — so what the generators are given is identical and
-                    the comparison in §4 is generation-only. The retrieval times
-                    still differ between the arms; at this scale that is machine
-                    noise, not a difference in work done. The box plots show the
+                    the comparison in §4 is generation-only. The retrieval
+                    medians still differ between the arms. The box plots show the
                     spread behind each median.
                   </p>
                 </div>

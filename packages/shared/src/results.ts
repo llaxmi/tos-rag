@@ -57,12 +57,16 @@ export interface ConfigRow extends ConfigMetrics {
  *  sweep separates its configurations at all is established by these paired
  *  tests, not by whether the per-config intervals happen to overlap. */
 export interface BestVsRest {
-  winner: string;
-  metric: string;
+  /** Descriptive fields are nullable rather than defaulted: the dashboard omits
+   *  the fragment it cannot source. `alpha` in particular is a claimed
+   *  significance threshold — defaulting it to the experiment's 0.05 would
+   *  render a number the payload never carried. */
+  winner: string | null;
+  metric: string | null;
   nComparisons: number;
   nSignificant: number;
-  alpha: number;
-  correction: string;
+  alpha: number | null;
+  correction: string | null;
   /** The analysis step's own one-sentence summary; rendered verbatim. */
   interpretation: string;
 }
@@ -231,12 +235,12 @@ function parseBestVsRest(payload: unknown): BestVsRest | null {
   const interpretation = str(payload["interpretation"]);
   if (nComparisons === null || nSignificant === null || !interpretation) return null;
   return {
-    winner: str(payload["winner"]) ?? "",
-    metric: str(payload["metric"]) ?? "",
+    winner: str(payload["winner"]),
+    metric: str(payload["metric"]),
     nComparisons,
     nSignificant,
-    alpha: num(payload["alpha"]) ?? 0.05,
-    correction: str(payload["correction"]) ?? "",
+    alpha: num(payload["alpha"]),
+    correction: str(payload["correction"]),
     interpretation,
   };
 }

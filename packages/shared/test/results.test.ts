@@ -48,6 +48,25 @@ describe("parseAnalysis", () => {
     expect(d.phase1).not.toBeNull();
   });
 
+  it("nulls a missing alpha rather than filling in the experiment's 0.05", () => {
+    const row = ROWS.find((r) => r.analysis === "phase1_best_vs_rest")!;
+    const payload = { ...(row.payload as Record<string, unknown>) };
+    delete payload["alpha"];
+    delete payload["correction"];
+    delete payload["winner"];
+    delete payload["metric"];
+    const d = parseAnalysis([{ analysis: "phase1_best_vs_rest", payload }]);
+    // The counts still parse, so the slice survives — but no descriptive field
+    // is invented. A claimed significance threshold the payload never carried
+    // would be a fabricated number.
+    expect(d.bestVsRest).not.toBeNull();
+    expect(d.bestVsRest!.nComparisons).toBe(14);
+    expect(d.bestVsRest!.alpha).toBeNull();
+    expect(d.bestVsRest!.correction).toBeNull();
+    expect(d.bestVsRest!.winner).toBeNull();
+    expect(d.bestVsRest!.metric).toBeNull();
+  });
+
   it("nulls bestVsRest when a required count is missing, never coercing it to 0", () => {
     const row = ROWS.find((r) => r.analysis === "phase1_best_vs_rest")!;
     const payload = { ...(row.payload as Record<string, unknown>) };
