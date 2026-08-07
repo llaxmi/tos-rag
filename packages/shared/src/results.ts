@@ -128,6 +128,10 @@ export interface JudgeValidation {
   threshold: number;
   passes: boolean;
   interpretation: string;
+  /** Sampling caveats the analysis step recorded — e.g. that the validation
+   *  sample is verdict-balanced, not proportional to the judged population.
+   *  Rendered verbatim; never paraphrased. */
+  caveats: string[];
 }
 
 export interface DashboardData {
@@ -402,6 +406,10 @@ function parseJudge(payload: unknown): JudgeValidation | null {
     const high = num(jvh["kappa_ci"]["high"]);
     if (low !== null && high !== null) kappaCI = [low, high];
   }
+  const rawCaveats = payload["caveats"];
+  const caveats = Array.isArray(rawCaveats)
+    ? rawCaveats.filter((c): c is string => typeof c === "string")
+    : [];
   return {
     kappa,
     kappaCI,
@@ -411,6 +419,7 @@ function parseJudge(payload: unknown): JudgeValidation | null {
     threshold,
     passes: gate["passes"] === true,
     interpretation: str(gate["interpretation"]) ?? "",
+    caveats,
   };
 }
 

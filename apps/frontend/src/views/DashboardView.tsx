@@ -457,6 +457,61 @@ export function DashboardView() {
             ) : (
               <NoData what="Phase-2 paired comparison" failed={loadFailed} />
             )}
+
+            {data?.heldOut && (
+              <div className="mt-8">
+                <p className={EYEBROW}>
+                  {data.heldOut.label} · n = {data.heldOut.nQuestions}
+                </p>
+                <PairedTableCard table={data.heldOut} showPValue={false} />
+                <p className="bg-muted text-ink-soft mt-3 rounded-lg p-4 text-[13px] leading-relaxed">
+                  {data.heldOut.rows[0]?.note}
+                </p>
+              </div>
+            )}
+
+            {data?.judge && (
+              <Card className="mt-8 gap-0 p-6">
+                <p className={EYEBROW}>Judge validation</p>
+                <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+                  <p className="text-foreground font-mono text-[34px] font-bold leading-none">
+                    κ = {data.judge.kappa.toFixed(2)}
+                  </p>
+                  <Badge variant={data.judge.passes ? "default" : "destructive"}>
+                    {data.judge.passes ? "gate passed" : "gate failed"}
+                  </Badge>
+                  <span className="text-muted-foreground font-mono text-[12.5px]">
+                    threshold {data.judge.threshold.toFixed(2)} · {data.judge.band}
+                  </span>
+                </div>
+                <p className="text-ink-soft mt-4 max-w-[62ch] text-[13.5px] leading-relaxed">
+                  {data.judge.interpretation}
+                </p>
+                <div className="text-muted-foreground mt-4 flex flex-wrap gap-6 font-mono text-[12.5px]">
+                  {data.judge.percentAgreement !== null && (
+                    <span>
+                      {(data.judge.percentAgreement * 100).toFixed(0)}%{" "}
+                      <span className="text-ink-soft">raw agreement</span>
+                    </span>
+                  )}
+                  <span>
+                    n = {data.judge.n} <span className="text-ink-soft">hand-labelled</span>
+                  </span>
+                  {data.judge.kappaCI && (
+                    <span>
+                      95% CI {data.judge.kappaCI[0].toFixed(2)}–{data.judge.kappaCI[1].toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                {data.judge.caveats.length > 0 && (
+                  <ul className="text-ink-soft mt-4 flex list-disc flex-col gap-1.5 pl-4 text-[12.5px] leading-relaxed">
+                    {data.judge.caveats.map((c) => (
+                      <li key={c}>{c}</li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            )}
           </Section>
 
           <CutMark />
@@ -581,8 +636,19 @@ export function DashboardView() {
 
 /** §4's paired comparison table. Every number is read from the stored payload:
  *  the bar widths are relative magnitudes of the stored deltas, and
- *  significance is whatever the Holm correction recorded. */
-function PairedTableCard({ table }: { table: PairedTable }) {
+ *  significance is whatever the Holm correction recorded.
+ *
+ *  `showPValue` is false for the held-out subset, whose `pRaw`/`pHolm` are
+ *  `NaN` by design (n = 10 supports no inferential claim) — the column and
+ *  the significance-tinted delta bar are dropped rather than rendering a
+ *  p-value that was never computed. */
+function PairedTableCard({
+  table,
+  showPValue = true,
+}: {
+  table: PairedTable;
+  showPValue?: boolean;
+}) {
   const maxDelta = Math.max(...table.rows.map((m) => Math.abs(m.delta.mean)), 1e-9);
   return (
     <Card className="overflow-hidden p-0">
@@ -596,7 +662,7 @@ function PairedTableCard({ table }: { table: PairedTable }) {
               Δ Opus − Llama
             </TableHead>
             <TableHead className={HEAD_CELL_LG}>W–L–T</TableHead>
-            <TableHead className={HEAD_CELL_LG}>p (Holm)</TableHead>
+            {showPValue && <TableHead className={HEAD_CELL_LG}>p (Holm)</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -626,7 +692,11 @@ function PairedTableCard({ table }: { table: PairedTable }) {
                       <div
                         className={cn(
                           "h-full rounded-full",
-                          m.significant ? "bg-seq-5" : "bg-seq-2",
+                          showPValue
+                            ? m.significant
+                              ? "bg-seq-5"
+                              : "bg-seq-2"
+                            : "bg-seq-3",
                         )}
                         style={{ width: `${deltaFrac * 100}%` }}
                       />
@@ -649,17 +719,19 @@ function PairedTableCard({ table }: { table: PairedTable }) {
                     </TooltipContent>
                   </Tooltip>
                 </TableCell>
-                <TableCell className={NUM_CELL_LG}>
-                  {m.significant ? (
-                    <span className="bg-seq-1 text-seq-6 rounded px-2 py-0.5 font-semibold">
-                      {m.pHolm.toFixed(3)}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">
-                      {m.pHolm.toFixed(3)}
-                    </span>
-                  )}
-                </TableCell>
+                {showPValue && (
+                  <TableCell className={NUM_CELL_LG}>
+                    {m.significant ? (
+                      <span className="bg-seq-1 text-seq-6 rounded px-2 py-0.5 font-semibold">
+                        {m.pHolm.toFixed(3)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {m.pHolm.toFixed(3)}
+                      </span>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

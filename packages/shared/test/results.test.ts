@@ -113,6 +113,21 @@ describe("parseAnalysis", () => {
     expect(d.judge!.passes).toBe(true);
   });
 
+  it("reads the judge-validation sampling caveats verbatim", () => {
+    const d = parseAnalysis(ROWS);
+    expect(d.judge!.caveats).toHaveLength(2);
+    expect(d.judge!.caveats[0]).toContain("balanced by judge verdict");
+    expect(d.judge!.caveats[1]).toContain("Only rows the judge decided");
+  });
+
+  it("drops non-string caveat entries instead of throwing", () => {
+    const judgeRow = ROWS.find((r) => r.analysis === "judge_validation")!;
+    const payload = JSON.parse(JSON.stringify(judgeRow.payload)) as Record<string, unknown>;
+    payload["caveats"] = ["kept", 42, null, "also kept"];
+    const d = parseAnalysis([{ analysis: "judge_validation", payload }]);
+    expect(d.judge!.caveats).toEqual(["kept", "also kept"]);
+  });
+
   it("preserves a null percentAgreement instead of coercing it to 0", () => {
     const judgeRow = ROWS.find((r) => r.analysis === "judge_validation")!;
     const payload = JSON.parse(JSON.stringify(judgeRow.payload)) as {
