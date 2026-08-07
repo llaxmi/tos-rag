@@ -33,6 +33,7 @@ select
   e.hit_at_8,
   e.squad_f1,
   e.squad_em,
+  e.faithfulness,
   r.retrieval_ms,
   r.generation_ms
 from runs r
@@ -159,6 +160,7 @@ def load_phase1_rows(dsn: str, model: str = PHASE1_MODEL) -> list[Row]:
             hit_at_8=as_float(record["hit_at_8"]),
             squad_f1=as_float(record["squad_f1"]),
             squad_em=as_float(record["squad_em"]),
+            faithfulness=as_float(record["faithfulness"]),
             retrieval_ms=as_float(record["retrieval_ms"]),
             generation_ms=as_float(record["generation_ms"]),
         )

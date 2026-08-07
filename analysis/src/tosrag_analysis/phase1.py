@@ -27,6 +27,8 @@ METRIC_NOTES: dict[str, str] = {
     "hit_at_8": "Hit rate at k=5. Column name is legacy (k was reduced from 8; PRD 15 #11).",
     "squad_f1": "SQuAD token-overlap F1. Low across the board because Llama answers tersely.",
     "squad_em": "SQuAD exact match.",
+    "faithfulness": "Answer-vs-context faithfulness; NULL for abstentions and for answers "
+    "that decompose to zero statements. Descriptive only — not part of the tested family.",
     "retrieval_ms": "Retrieval latency, milliseconds. Lower is better.",
     "generation_ms": "Generation latency, milliseconds. Lower is better.",
 }
@@ -46,6 +48,7 @@ class Row:
     hit_at_8: float | None = None
     squad_f1: float | None = None
     squad_em: float | None = None
+    faithfulness: float | None = None
     retrieval_ms: float | None = None
     generation_ms: float | None = None
 

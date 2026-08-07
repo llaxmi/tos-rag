@@ -33,7 +33,9 @@ SMALL_QUESTIONS = [f"q{i:02d}" for i in range(8)]
 SEPARABLE_QUESTIONS = [f"q{i:02d}" for i in range(12)]
 
 
-def make_rows(score_for=None, recall_for=None, latency_for=None, questions=None) -> list[Row]:
+def make_rows(
+    score_for=None, recall_for=None, latency_for=None, questions=None, faithfulness_for=None
+) -> list[Row]:
     """A complete Phase-1 grid. Callers override the metric a given test cares about."""
     score_for = score_for or (lambda strategy, size, qid: 1.0 if size == 256 else 0.0)
     recall_for = recall_for or (lambda strategy, size, qid: 0.9)
@@ -41,12 +43,17 @@ def make_rows(score_for=None, recall_for=None, latency_for=None, questions=None)
     questions = questions or QUESTIONS
     # The last two questions stand in for the unanswerable ones (PRD 10.1).
     unanswerable_ids = set(questions[-2:])
+    # A third question stands in for an answer that decomposes to zero statements —
+    # faithfulness is NULL there too even though it is answerable (PRD 10.4 / eval notes).
+    zero_statement_id = questions[len(questions) // 2] if len(questions) > 2 else None
+    faithfulness_for = faithfulness_for or (lambda strategy, size, qid: 0.8)
 
     rows = []
     for strategy in STRATEGIES:
         for size in SIZES:
             for qid in questions:
                 unanswerable = qid in unanswerable_ids
+                faithfulness_null = unanswerable or qid == zero_statement_id
                 rows.append(
                     Row(
                         strategy=strategy,
@@ -60,6 +67,7 @@ def make_rows(score_for=None, recall_for=None, latency_for=None, questions=None)
                         hit_at_8=None if unanswerable else 1.0,
                         squad_f1=0.65,
                         squad_em=0.0,
+                        faithfulness=None if faithfulness_null else faithfulness_for(strategy, size, qid),
                         retrieval_ms=12.0,
                         generation_ms=latency_for(strategy, size, qid),
                     )
@@ -130,6 +138,24 @@ class TestRanking:
         # 20 questions, 2 of them unanswerable -> retrieval metrics see 18.
         assert metrics["char_recall"]["n"] == 18
         assert metrics[HEADLINE_METRIC]["n"] == 20
+
+    def test_faithfulness_nulls_reduce_only_their_own_n(self):
+        # 20 questions: 2 unanswerable + 1 zero-statement answer -> faithfulness sees 17,
+        # while char_recall (NULL only for the 2 unanswerable) sees 18 and the headline
+        # metric, which is never NULL, keeps the full 20. NULLs must never be coerced to 0.
+        payload = build_config_ranking(make_rows())
+        metrics = payload["configs"][0]["metrics"]
+        assert metrics["faithfulness"]["n"] == 17
+        assert metrics["char_recall"]["n"] == 18
+        assert metrics[HEADLINE_METRIC]["n"] == 20
+
+    def test_faithfulness_all_null_omits_ci_without_crashing(self):
+        rows = make_rows(faithfulness_for=lambda strategy, size, qid: None)
+        payload = build_config_ranking(rows)
+        metrics = payload["configs"][0]["metrics"]
+        assert metrics["faithfulness"]["mean"] is None
+        assert metrics["faithfulness"]["n"] == 0
+        assert metrics["faithfulness"]["ci_omitted_reason"] == "no non-null values"
 
     def test_config_ranking_carries_latency_quartiles(self):
         payload = build_config_ranking(make_rows())
