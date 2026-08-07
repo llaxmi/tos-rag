@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { ask, getDocument, type AskResponse, type CanonicalDocument } from "../lib/api";
 import {
   buildSpanSegments,
-  DOC_LABELS,
+  docLabel,
   MODEL_LABELS,
   parseCitations,
   PHASE1_WINNER,
@@ -185,9 +185,11 @@ export function AskView() {
   );
   // Single source of truth for "did the answer cite this chunk" — the same
   // parser `ChatTurn` uses to render the inline citation buttons.
-  const citedIds = activeTurn?.response
-    ? parseCitations(activeTurn.response.answer).citedIds
-    : [];
+  const activeAnswer = activeTurn?.response?.answer;
+  const citedIds = useMemo(
+    () => (activeAnswer ? parseCitations(activeAnswer).citedIds : []),
+    [activeAnswer],
+  );
 
   const summary = [
     DOC_OPTIONS.find((o) => o.value === pipeline.docValue)?.label ?? "Both documents",
@@ -316,7 +318,7 @@ export function AskView() {
                             : "border-border bg-background text-ink-soft hover:bg-accent",
                         )}
                       >
-                        {DOC_LABELS[id] ?? id}
+                        {docLabel(id)}
                       </button>
                     ))}
                   </div>
