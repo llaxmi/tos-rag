@@ -10,7 +10,7 @@ from typing import Callable, Iterable, Sequence
 
 import numpy as np
 
-from .stats import Estimate, clean_values, estimate, holm, paired_wilcoxon
+from .stats import Estimate, clean_values, estimate, holm, paired_wilcoxon, summarise_latency
 
 EXPECTED_CONFIGS = 15  # 5 strategies x 3 chunk sizes
 EXPECTED_QUESTIONS = 20  # Round-1 questions (PRD 7)
@@ -27,6 +27,8 @@ METRIC_NOTES: dict[str, str] = {
     "hit_at_8": "Hit rate at k=5. Column name is legacy (k was reduced from 8; PRD 15 #11).",
     "squad_f1": "SQuAD token-overlap F1. Low across the board because Llama answers tersely.",
     "squad_em": "SQuAD exact match.",
+    "faithfulness": "Answer-vs-context faithfulness; NULL for abstentions and for answers "
+    "that decompose to zero statements. Descriptive only — not part of the tested family.",
     "retrieval_ms": "Retrieval latency, milliseconds. Lower is better.",
     "generation_ms": "Generation latency, milliseconds. Lower is better.",
 }
@@ -46,6 +48,7 @@ class Row:
     hit_at_8: float | None = None
     squad_f1: float | None = None
     squad_em: float | None = None
+    faithfulness: float | None = None
     retrieval_ms: float | None = None
     generation_ms: float | None = None
 
@@ -161,6 +164,12 @@ def build_config_ranking(rows: Sequence[Row]) -> dict:
                 "metrics": {
                     metric: estimate(_values(config_rows, metric)).as_dict()
                     for metric in METRIC_NOTES
+                },
+                # Sibling to the mean+CI estimates above: a five-number summary per
+                # stage, for the dashboard's per-config latency box plot (PRD 10.5).
+                "latency_ms": {
+                    stage: summarise_latency(_values(config_rows, stage))
+                    for stage in ("retrieval_ms", "generation_ms")
                 },
             }
         )

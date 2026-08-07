@@ -1,0 +1,2996 @@
+[
+    {
+        "payload": {
+            "gate": {
+                "passes": true,
+                "threshold": 0.61,
+                "interpretation": "kappa = 0.920 meets the >= 0.61 gate (almost perfect agreement): the judge's scores can be reported as trustworthy."
+            },
+            "sample": {
+                "n": 50,
+                "by_phase": {
+                    "1": 41,
+                    "2": 9
+                },
+                "by_qtype": {
+                    "factual": 16,
+                    "comparison": 15,
+                    "multi_clause": 17,
+                    "unanswerable": 2
+                },
+                "by_judge_label": {
+                    "accurate": 25,
+                    "incorrect": 25
+                },
+                "stratification": "balanced by judge verdict, round-robin across qtype"
+            },
+            "caveats": [
+                "Sample is balanced by judge verdict, so kappa describes agreement on the balanced sample and not on the full judged population (~83% accurate).",
+                "Only rows the judge decided are validated; rows settled by the deterministic rules (abstention, exact match) need no human check."
+            ],
+            "judge_vs_human": {
+                "n": 50,
+                "band": "almost perfect",
+                "kappa": 0.9199999999999999,
+                "kappa_ci": {
+                    "low": 0.7954173486088381,
+                    "high": 1.0
+                },
+                "percent_agreement": 0.96
+            },
+            "inter_annotator": {
+                "n": 50,
+                "band": "almost perfect",
+                "kappa": 0.9196141479099678,
+                "kappa_ci": {
+                    "low": 0.7954173486088381,
+                    "high": 1.0
+                },
+                "percent_agreement": 0.96
+            }
+        },
+        "analysis": "judge_validation"
+    },
+    {
+        "payload": {
+            "winner": "sentence:512",
+            "configs": [
+                {
+                    "rank": 1,
+                    "config": "sentence:512",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": null,
+                            "mean": 1.0,
+                            "ci_omitted_reason": "zero variance in sample"
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.05,
+                                "high": 0.4
+                            },
+                            "mean": 0.2,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5290858994126808,
+                                "high": 0.7435104524224769
+                            },
+                            "mean": 0.6349764753308162,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5,
+                                "high": 1.0
+                            },
+                            "mean": 0.9,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9236842105263159,
+                                "high": 1.0
+                            },
+                            "mean": 0.9847368421052631,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9141646785403867,
+                                "high": 0.9943181818181819
+                            },
+                            "mean": 0.9754037081339713,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 31.8,
+                                "high": 47.645557169551374
+                            },
+                            "mean": 37.7,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 8624.844067428516,
+                                "high": 10720.918421972798
+                            },
+                            "mean": 9373.95,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.018291648309019887,
+                                "high": 0.028460550255522955
+                            },
+                            "mean": 0.023373094930008005,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "sentence",
+                    "chunk_size": 512,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 26.75,
+                            "q3": 42.5,
+                            "max": 89.0,
+                            "min": 20.0,
+                            "p95": 65.25000000000001,
+                            "median": 30.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 8061.75,
+                            "q3": 10257.0,
+                            "max": 16920.0,
+                            "min": 6240.0,
+                            "p95": 10992.950000000004,
+                            "median": 9741.0
+                        }
+                    }
+                },
+                {
+                    "rank": 2,
+                    "config": "recursive:256",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5607523277292106,
+                                "high": 0.7914580761506366
+                            },
+                            "mean": 0.6828413039007164,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5,
+                                "high": 1.0
+                            },
+                            "mean": 0.9,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6704059829059829,
+                                "high": 1.0
+                            },
+                            "mean": 0.8977029914529915,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7604166666666666,
+                                "high": 0.9583333333333333
+                            },
+                            "mean": 0.875,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 42.06417376307829,
+                                "high": 60.599999999999994
+                            },
+                            "mean": 50.3,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 4471.125655306095,
+                                "high": 5624.326828098262
+                            },
+                            "mean": 4929.55,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.03499935954554452,
+                                "high": 0.060756890312357315
+                            },
+                            "mean": 0.04768829472243065,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "recursive",
+                    "chunk_size": 256,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 33.75,
+                            "q3": 65.75,
+                            "max": 96.0,
+                            "min": 28.0,
+                            "p95": 91.25,
+                            "median": 41.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 4319.75,
+                            "q3": 5306.0,
+                            "max": 8835.0,
+                            "min": 2966.0,
+                            "p95": 6889.4000000000015,
+                            "median": 4507.0
+                        }
+                    }
+                },
+                {
+                    "rank": 3,
+                    "config": "recursive:512",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": null,
+                            "mean": 1.0,
+                            "ci_omitted_reason": "zero variance in sample"
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.05,
+                                "high": 0.4
+                            },
+                            "mean": 0.2,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5396974990597634,
+                                "high": 0.7441737470996284
+                            },
+                            "mean": 0.6374625251745838,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.4,
+                                "high": 1.0
+                            },
+                            "mean": 0.8,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9236842105263159,
+                                "high": 1.0
+                            },
+                            "mean": 0.9847368421052631,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7957540822670969,
+                                "high": 1.0
+                            },
+                            "mean": 0.9446428571428571,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 41.4,
+                                "high": 70.69963836635088
+                            },
+                            "mean": 54.75,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 8642.786655487584,
+                                "high": 11161.2364521712
+                            },
+                            "mean": 9808.9,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.020537322639805004,
+                                "high": 0.031283656917774745
+                            },
+                            "mean": 0.026044270928891153,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "recursive",
+                    "chunk_size": 512,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 27.0,
+                            "q3": 90.75,
+                            "max": 109.0,
+                            "min": 19.0,
+                            "p95": 108.05,
+                            "median": 34.5
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 8139.5,
+                            "q3": 11137.5,
+                            "max": 15946.0,
+                            "min": 4122.0,
+                            "p95": 15450.1,
+                            "median": 9262.5
+                        }
+                    }
+                },
+                {
+                    "rank": 4,
+                    "config": "semantic:256",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.553712536646647,
+                                "high": 0.7786432380206268
+                            },
+                            "mean": 0.6692764274800826,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.4,
+                                "high": 1.0
+                            },
+                            "mean": 0.8,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.632554945054945,
+                                "high": 1.0
+                            },
+                            "mean": 0.8787774725274725,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.8364486107816568,
+                                "high": 0.9853896103896104
+                            },
+                            "mean": 0.9416396103896104,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 45.7,
+                                "high": 58.60000000000001
+                            },
+                            "mean": 51.4,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 3930.332997287692,
+                                "high": 4873.283130549526
+                            },
+                            "mean": 4371.1,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.03565106007050706,
+                                "high": 0.06874381820210539
+                            },
+                            "mean": 0.050829589117785526,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "semantic",
+                    "chunk_size": 256,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 42.0,
+                            "q3": 62.25,
+                            "max": 83.0,
+                            "min": 27.0,
+                            "p95": 79.2,
+                            "median": 44.5
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 3592.5,
+                            "q3": 4835.25,
+                            "max": 6576.0,
+                            "min": 2499.0,
+                            "p95": 6488.6,
+                            "median": 4234.5
+                        }
+                    }
+                },
+                {
+                    "rank": 5,
+                    "config": "recursive:128",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.625,
+                                "high": 1.0
+                            },
+                            "mean": 0.875,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.05,
+                                "high": 0.4
+                            },
+                            "mean": 0.2,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5135607413539709,
+                                "high": 0.750165580118523
+                            },
+                            "mean": 0.6374963427083087,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.4,
+                                "high": 1.0
+                            },
+                            "mean": 0.8,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.5852029914529915,
+                                "high": 0.9602029914529915
+                            },
+                            "mean": 0.8352029914529915,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 17,
+                            "ci": {
+                                "low": 0.7549019607843137,
+                                "high": 0.9705882352941175
+                            },
+                            "mean": 0.9019607843137254,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 30.75,
+                                "high": 62.0
+                            },
+                            "mean": 42.35,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 2754.4739676990794,
+                                "high": 3434.311509395733
+                            },
+                            "mean": 3104.05,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.057121375906452346,
+                                "high": 0.10617683868688296
+                            },
+                            "mean": 0.08263246751187867,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "recursive",
+                    "chunk_size": 128,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 21.0,
+                            "q3": 46.75,
+                            "max": 128.0,
+                            "min": 13.0,
+                            "p95": 120.4,
+                            "median": 26.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 2410.5,
+                            "q3": 3632.25,
+                            "max": 4454.0,
+                            "min": 1629.0,
+                            "p95": 4190.85,
+                            "median": 3358.5
+                        }
+                    }
+                },
+                {
+                    "rank": 6,
+                    "config": "section:256",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.625,
+                                "high": 1.0
+                            },
+                            "mean": 0.875,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5089337040696211,
+                                "high": 0.7655723480147199
+                            },
+                            "mean": 0.6489561839243579,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.35,
+                                "high": 0.95
+                            },
+                            "mean": 0.75,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.625,
+                                "high": 1.0
+                            },
+                            "mean": 0.875,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 15,
+                            "ci": {
+                                "low": 0.5666666666666667,
+                                "high": 0.9666666666666667
+                            },
+                            "mean": 0.8333333333333334,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 46.45,
+                                "high": 52.711453409845674
+                            },
+                            "mean": 49.6,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 3265.9189692414616,
+                                "high": 4068.9602400234076
+                            },
+                            "mean": 3668.05,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.04984763568157904,
+                                "high": 0.09381751102356561
+                            },
+                            "mean": 0.07260414903986515,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "section",
+                    "chunk_size": 256,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 48.25,
+                            "q3": 53.0,
+                            "max": 69.0,
+                            "min": 33.0,
+                            "p95": 54.750000000000014,
+                            "median": 50.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 3026.5,
+                            "q3": 4327.75,
+                            "max": 5274.0,
+                            "min": 2206.0,
+                            "p95": 5008.95,
+                            "median": 3704.5
+                        }
+                    }
+                },
+                {
+                    "rank": 7,
+                    "config": "sentence:256",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": null,
+                            "mean": 1.0,
+                            "ci_omitted_reason": "zero variance in sample"
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5580164943829444,
+                                "high": 0.7740722761677263
+                            },
+                            "mean": 0.6659521633667917,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.3,
+                                "high": 0.8999999999999999
+                            },
+                            "mean": 0.7,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9236842105263159,
+                                "high": 1.0
+                            },
+                            "mean": 0.9847368421052631,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9044642857142857,
+                                "high": 0.9910714285714286
+                            },
+                            "mean": 0.9629464285714285,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 32.25,
+                                "high": 53.234247578896614
+                            },
+                            "mean": 37.85,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 5200.347349670126,
+                                "high": 6378.959075355828
+                            },
+                            "mean": 5772.55,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.038375548279989825,
+                                "high": 0.06178752069140939
+                            },
+                            "mean": 0.04947431797696365,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "sentence",
+                    "chunk_size": 256,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 27.0,
+                            "q3": 38.75,
+                            "max": 115.0,
+                            "min": 18.0,
+                            "p95": 55.15000000000005,
+                            "median": 35.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 4676.25,
+                            "q3": 6887.75,
+                            "max": 8803.0,
+                            "min": 3507.0,
+                            "p95": 7389.4000000000015,
+                            "median": 5790.0
+                        }
+                    }
+                },
+                {
+                    "rank": 8,
+                    "config": "semantic:512",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5485222245969277,
+                                "high": 0.7770610055298166
+                            },
+                            "mean": 0.6693867575023182,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.2,
+                                "high": 0.9000000000000001
+                            },
+                            "mean": 0.7,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.8368055555555556,
+                                "high": 0.9861111111111112
+                            },
+                            "mean": 0.9461805555555556,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 36.75,
+                                "high": 51.55
+                            },
+                            "mean": 42.85,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 5725.75,
+                                "high": 7288.816388441769
+                            },
+                            "mean": 6502.0,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.02471333649828663,
+                                "high": 0.044720453476128144
+                            },
+                            "mean": 0.033721138073449314,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "semantic",
+                    "chunk_size": 512,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 31.75,
+                            "q3": 46.25,
+                            "max": 89.0,
+                            "min": 23.0,
+                            "p95": 69.05000000000001,
+                            "median": 38.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 5417.5,
+                            "q3": 7861.25,
+                            "max": 10249.0,
+                            "min": 3468.0,
+                            "p95": 9147.95,
+                            "median": 6479.5
+                        }
+                    }
+                },
+                {
+                    "rank": 9,
+                    "config": "fixed:256",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.05,
+                                "high": 0.4
+                            },
+                            "mean": 0.2,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5437971929210877,
+                                "high": 0.7530857028384942
+                            },
+                            "mean": 0.6495717730214438,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.3,
+                                "high": 0.8999999999999999
+                            },
+                            "mean": 0.7,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7931547619047619,
+                                "high": 0.9702380952380953
+                            },
+                            "mean": 0.9077380952380952,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 40.9,
+                                "high": 56.377649235294214
+                            },
+                            "mean": 46.0,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 6600.605860408768,
+                                "high": 9341.946138203366
+                            },
+                            "mean": 7714.55,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.029992717562059575,
+                                "high": 0.05144247545449626
+                            },
+                            "mean": 0.040991265327189885,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "fixed",
+                    "chunk_size": 256,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 37.25,
+                            "q3": 50.0,
+                            "max": 105.0,
+                            "min": 27.0,
+                            "p95": 61.30000000000003,
+                            "median": 45.5
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 5454.75,
+                            "q3": 8983.0,
+                            "max": 16653.0,
+                            "min": 3652.0,
+                            "p95": 12182.300000000003,
+                            "median": 7398.0
+                        }
+                    }
+                },
+                {
+                    "rank": 10,
+                    "config": "semantic:128",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.566297791333638,
+                                "high": 0.7810402638348963
+                            },
+                            "mean": 0.6769759853805561,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.2,
+                                "high": 0.9000000000000001
+                            },
+                            "mean": 0.7,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.632554945054945,
+                                "high": 1.0
+                            },
+                            "mean": 0.8787774725274725,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.7358583044687937,
+                                "high": 0.9791666666666666
+                            },
+                            "mean": 0.9026515151515151,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 31.575871013915787,
+                                "high": 45.3
+                            },
+                            "mean": 38.15,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 2540.991747394513,
+                                "high": 3225.472249522347
+                            },
+                            "mean": 2860.0,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.06372948893545481,
+                                "high": 0.12032545292311175
+                            },
+                            "mean": 0.0908387673780598,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "semantic",
+                    "chunk_size": 128,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 26.75,
+                            "q3": 54.5,
+                            "max": 65.0,
+                            "min": 12.0,
+                            "p95": 63.1,
+                            "median": 34.5
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 2153.5,
+                            "q3": 3465.5,
+                            "max": 4453.0,
+                            "min": 1857.0,
+                            "p95": 4300.05,
+                            "median": 2730.5
+                        }
+                    }
+                },
+                {
+                    "rank": 11,
+                    "config": "fixed:512",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": null,
+                            "mean": 1.0,
+                            "ci_omitted_reason": "zero variance in sample"
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.05,
+                                "high": 0.4
+                            },
+                            "mean": 0.2,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5600117095526166,
+                                "high": 0.7542897361785652
+                            },
+                            "mean": 0.6536557079298178,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.9
+                            },
+                            "mean": 0.6,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.9236842105263159,
+                                "high": 1.0
+                            },
+                            "mean": 0.9847368421052631,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6827380952380953,
+                                "high": 0.9910714285714286
+                            },
+                            "mean": 0.8931547619047618,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 38.0,
+                                "high": 72.07464566178405
+                            },
+                            "mean": 51.45,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 10320.22825353732,
+                                "high": 13756.787335711888
+                            },
+                            "mean": 11698.4,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.018107007301753124,
+                                "high": 0.028015527556850533
+                            },
+                            "mean": 0.02315725424290072,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "fixed",
+                    "chunk_size": 512,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 26.25,
+                            "q3": 63.5,
+                            "max": 150.0,
+                            "min": 15.0,
+                            "p95": 115.80000000000003,
+                            "median": 33.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 8990.0,
+                            "q3": 12554.0,
+                            "max": 19877.0,
+                            "min": 6847.0,
+                            "p95": 19720.25,
+                            "median": 10470.5
+                        }
+                    }
+                },
+                {
+                    "rank": 12,
+                    "config": "sentence:128",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5678643977121147,
+                                "high": 0.7861496882413681
+                            },
+                            "mean": 0.6827684265602103,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.9
+                            },
+                            "mean": 0.6,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.5903311495377888,
+                                "high": 0.9602029914529915
+                            },
+                            "mean": 0.8389804639804639,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6979166666666667,
+                                "high": 0.96875
+                            },
+                            "mean": 0.8843005952380952,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 27.1,
+                                "high": 46.717035969916836
+                            },
+                            "mean": 32.45,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 3206.2,
+                                "high": 4185.267810139745
+                            },
+                            "mean": 3616.45,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.05641196011940502,
+                                "high": 0.10300768429731122
+                            },
+                            "mean": 0.07906977437758218,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "sentence",
+                    "chunk_size": 128,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 24.0,
+                            "q3": 34.25,
+                            "max": 104.0,
+                            "min": 18.0,
+                            "p95": 54.60000000000004,
+                            "median": 26.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 2889.5,
+                            "q3": 3781.0,
+                            "max": 6170.0,
+                            "min": 2270.0,
+                            "p95": 5908.75,
+                            "median": 3328.5
+                        }
+                    }
+                },
+                {
+                    "rank": 13,
+                    "config": "section:128",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.5625,
+                                "high": 0.9375
+                            },
+                            "mean": 0.8125,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.46026750671703565,
+                                "high": 0.7444772048551497
+                            },
+                            "mean": 0.6130425470012171,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.8499999999999999
+                            },
+                            "mean": 0.55,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.5625,
+                                "high": 0.9375
+                            },
+                            "mean": 0.8125,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 15,
+                            "ci": {
+                                "low": 0.8095238095238095,
+                                "high": 1.0
+                            },
+                            "mean": 0.9380952380952381,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 49.87843225446734,
+                                "high": 63.10000000000001
+                            },
+                            "mean": 57.15,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 2261.9397670191393,
+                                "high": 2842.3447116701645
+                            },
+                            "mean": 2504.15,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.061916576627160116,
+                                "high": 0.12566295372787034
+                            },
+                            "mean": 0.09474001542671712,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "section",
+                    "chunk_size": 128,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 54.5,
+                            "q3": 62.25,
+                            "max": 85.0,
+                            "min": 24.0,
+                            "p95": 82.15,
+                            "median": 59.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 2003.5,
+                            "q3": 2761.75,
+                            "max": 4417.0,
+                            "min": 1509.0,
+                            "p95": 3296.000000000001,
+                            "median": 2488.0
+                        }
+                    }
+                },
+                {
+                    "rank": 14,
+                    "config": "section:512",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.625,
+                                "high": 1.0
+                            },
+                            "mean": 0.875,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5270838600249139,
+                                "high": 0.7540595765141854
+                            },
+                            "mean": 0.6407089675208459,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.0,
+                                "high": 0.8
+                            },
+                            "mean": 0.5,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.625,
+                                "high": 1.0
+                            },
+                            "mean": 0.875,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 15,
+                            "ci": {
+                                "low": 0.6222222222222221,
+                                "high": 0.9555555555555555
+                            },
+                            "mean": 0.8422222222222222,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 41.05,
+                                "high": 55.75
+                            },
+                            "mean": 47.4,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 3192.7289248853644,
+                                "high": 4736.283461827766
+                            },
+                            "mean": 3912.8,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.040928724377162676,
+                                "high": 0.0795744695999713
+                            },
+                            "mean": 0.060281598186135536,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "section",
+                    "chunk_size": 512,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 38.5,
+                            "q3": 53.0,
+                            "max": 87.0,
+                            "min": 23.0,
+                            "p95": 84.15,
+                            "median": 44.0
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 2533.25,
+                            "q3": 5376.25,
+                            "max": 7434.0,
+                            "min": 823.0,
+                            "p95": 6523.900000000001,
+                            "median": 3749.5
+                        }
+                    }
+                },
+                {
+                    "rank": 15,
+                    "config": "fixed:128",
+                    "metrics": {
+                        "hit_at_8": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6875,
+                                "high": 1.0
+                            },
+                            "mean": 0.9375,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_em": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.1,
+                                "high": 0.45
+                            },
+                            "mean": 0.25,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5366053634434905,
+                                "high": 0.7670673253787696
+                            },
+                            "mean": 0.6545252645613271,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.0,
+                                "high": 0.8
+                            },
+                            "mean": 0.5,
+                            "ci_omitted_reason": null
+                        },
+                        "char_recall": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.5697843774264809,
+                                "high": 0.9363348812167709
+                            },
+                            "mean": 0.8093033445079613,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.6145833333333333,
+                                "high": 0.9270833333333334
+                            },
+                            "mean": 0.8125,
+                            "ci_omitted_reason": null
+                        },
+                        "retrieval_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 35.9,
+                                "high": 46.15
+                            },
+                            "mean": 41.8,
+                            "ci_omitted_reason": null
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "ci": {
+                                "low": 2515.8530096471777,
+                                "high": 3198.1197098258544
+                            },
+                            "mean": 2821.95,
+                            "ci_omitted_reason": null
+                        },
+                        "char_precision": {
+                            "n": 16,
+                            "ci": {
+                                "low": 0.04756048122973361,
+                                "high": 0.09077435765337774
+                            },
+                            "mean": 0.06888299807255528,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "strategy": "fixed",
+                    "chunk_size": 128,
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 20,
+                            "q1": 36.75,
+                            "q3": 47.0,
+                            "max": 65.0,
+                            "min": 12.0,
+                            "p95": 50.750000000000014,
+                            "median": 46.5
+                        },
+                        "generation_ms": {
+                            "n": 20,
+                            "q1": 2196.0,
+                            "q3": 3443.25,
+                            "max": 4495.0,
+                            "min": 1789.0,
+                            "p95": 4267.0,
+                            "median": 2666.5
+                        }
+                    }
+                }
+            ],
+            "n_configs": 15,
+            "metric_notes": {
+                "hit_at_8": "Hit rate at k=5. Column name is legacy (k was reduced from 8; PRD 15 #11).",
+                "squad_em": "SQuAD exact match.",
+                "squad_f1": "SQuAD token-overlap F1. Low across the board because Llama answers tersely.",
+                "crag_score": "Truthfulness: mean CRAG judge score in {-1,0,+1} (PRD 10.3). Headline metric.",
+                "char_recall": "Char-span recall; NULL for unanswerable questions (PRD 10.1).",
+                "faithfulness": "Answer-vs-context faithfulness; NULL for abstentions and for answers that decompose to zero statements. Descriptive only — not part of the tested family.",
+                "retrieval_ms": "Retrieval latency, milliseconds. Lower is better.",
+                "generation_ms": "Generation latency, milliseconds. Lower is better.",
+                "char_precision": "Char-span precision; NULL for unanswerable questions (PRD 10.1). Intrinsically low: chunks are far larger than gold spans."
+            },
+            "selection_rule": "max mean Truthfulness; ties -> higher char_recall -> lower generation_ms",
+            "headline_metric": "crag_score"
+        },
+        "analysis": "phase1_config_ranking"
+    },
+    {
+        "payload": {
+            "factor": "strategy",
+            "levels": [
+                {
+                    "level": "recursive",
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.46323739230830735,
+                            "high": 0.9666666666666666
+                        },
+                        "mean": 0.8333333333333333,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 3
+                },
+                {
+                    "level": "semantic",
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.33333333333333337,
+                            "high": 0.9333333333333333
+                        },
+                        "mean": 0.7333333333333334,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 3
+                },
+                {
+                    "level": "sentence",
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.3666666666666666,
+                            "high": 0.9
+                        },
+                        "mean": 0.7333333333333333,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 3
+                },
+                {
+                    "level": "fixed",
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.19999999999999998,
+                            "high": 0.8333333333333333
+                        },
+                        "mean": 0.6,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 3
+                },
+                {
+                    "level": "section",
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.23333333333333334,
+                            "high": 0.8
+                        },
+                        "mean": 0.5999999999999999,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 3
+                }
+            ],
+            "metric": "crag_score",
+            "n_questions": 20,
+            "unit_of_analysis": "per-question mean across the other factor's levels"
+        },
+        "analysis": "phase1_factor_strategy"
+    },
+    {
+        "payload": {
+            "factor": "chunk_size",
+            "levels": [
+                {
+                    "level": 256,
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.43,
+                            "high": 0.93
+                        },
+                        "mean": 0.77,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 5
+                },
+                {
+                    "level": 512,
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.38,
+                            "high": 0.9
+                        },
+                        "mean": 0.7000000000000001,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 5
+                },
+                {
+                    "level": 128,
+                    "estimate": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.22999999999999998,
+                            "high": 0.85
+                        },
+                        "mean": 0.63,
+                        "ci_omitted_reason": null
+                    },
+                    "n_configs_averaged": 5
+                }
+            ],
+            "metric": "crag_score",
+            "n_questions": 20,
+            "unit_of_analysis": "per-question mean across the other factor's levels"
+        },
+        "analysis": "phase1_factor_size"
+    },
+    {
+        "payload": {
+            "test": "paired Wilcoxon signed-rank, two-sided, zero_method=zsplit",
+            "alpha": 0.05,
+            "metric": "crag_score",
+            "winner": "sentence:512",
+            "correction": "holm",
+            "comparisons": [
+                {
+                    "p_raw": 1.0,
+                    "config": "recursive:256",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 20,
+                        "wins": 0,
+                        "losses": 0,
+                        "method": "degenerate (all differences zero)",
+                        "n_pairs": 20,
+                        "p_value": 1.0,
+                        "statistic": null
+                    },
+                    "other_mean": 0.9,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": null,
+                        "mean": 0.0,
+                        "ci_omitted_reason": "zero variance in sample"
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 1.0,
+                    "config": "recursive:512",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 19,
+                        "wins": 1,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 1.0,
+                        "statistic": 95.0
+                    },
+                    "other_mean": 0.8,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.5
+                        },
+                        "mean": 0.1,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 1.0,
+                    "config": "semantic:256",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 19,
+                        "wins": 1,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 1.0,
+                        "statistic": 95.0
+                    },
+                    "other_mean": 0.8,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.5
+                        },
+                        "mean": 0.1,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 1.0,
+                    "config": "recursive:128",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 19,
+                        "wins": 1,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 1.0,
+                        "statistic": 95.0
+                    },
+                    "other_mean": 0.8,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.5
+                        },
+                        "mean": 0.1,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.5,
+                    "config": "section:256",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 18,
+                        "wins": 2,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.5,
+                        "statistic": 85.5
+                    },
+                    "other_mean": 0.75,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.55
+                        },
+                        "mean": 0.15,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.5,
+                    "config": "sentence:256",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 18,
+                        "wins": 2,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.5,
+                        "statistic": 85.5
+                    },
+                    "other_mean": 0.7,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.6
+                        },
+                        "mean": 0.2,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.5,
+                    "config": "semantic:512",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 18,
+                        "wins": 2,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.5,
+                        "statistic": 85.5
+                    },
+                    "other_mean": 0.7,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.6
+                        },
+                        "mean": 0.2,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.5,
+                    "config": "fixed:256",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 18,
+                        "wins": 2,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.5,
+                        "statistic": 85.5
+                    },
+                    "other_mean": 0.7,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.6
+                        },
+                        "mean": 0.2,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.5,
+                    "config": "semantic:128",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 18,
+                        "wins": 2,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.5,
+                        "statistic": 85.5
+                    },
+                    "other_mean": 0.7,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.0,
+                            "high": 0.6
+                        },
+                        "mean": 0.2,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.25,
+                    "config": "fixed:512",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 17,
+                        "wins": 3,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.25,
+                        "statistic": 76.5
+                    },
+                    "other_mean": 0.6,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.1,
+                            "high": 0.7
+                        },
+                        "mean": 0.3,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.25,
+                    "config": "sentence:128",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 17,
+                        "wins": 3,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.25,
+                        "statistic": 76.5
+                    },
+                    "other_mean": 0.6,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.1,
+                            "high": 0.7
+                        },
+                        "mean": 0.3,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.125,
+                    "config": "section:128",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 16,
+                        "wins": 4,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.125,
+                        "statistic": 68.0
+                    },
+                    "other_mean": 0.55,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.1,
+                            "high": 0.8
+                        },
+                        "mean": 0.35,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.125,
+                    "config": "section:512",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 16,
+                        "wins": 4,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.125,
+                        "statistic": 68.0
+                    },
+                    "other_mean": 0.5,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.1,
+                            "high": 0.9
+                        },
+                        "mean": 0.4,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                },
+                {
+                    "p_raw": 0.125,
+                    "config": "fixed:128",
+                    "p_holm": 1.0,
+                    "wilcoxon": {
+                        "ties": 16,
+                        "wins": 4,
+                        "losses": 0,
+                        "method": "permutation (exhaustive)",
+                        "n_pairs": 20,
+                        "p_value": 0.125,
+                        "statistic": 68.0
+                    },
+                    "other_mean": 0.5,
+                    "significant": false,
+                    "winner_mean": 0.9,
+                    "mean_difference": {
+                        "n": 20,
+                        "ci": {
+                            "low": 0.1,
+                            "high": 0.9
+                        },
+                        "mean": 0.4,
+                        "ci_omitted_reason": null
+                    },
+                    "median_difference": 0.0
+                }
+            ],
+            "n_comparisons": 14,
+            "n_significant": 0,
+            "interpretation": "sentence:512 is separable from 0 of 14 other configs after Holm correction at alpha = 0.05."
+        },
+        "analysis": "phase1_best_vs_rest"
+    },
+    {
+        "payload": {
+            "arms": {
+                "llama3.1:8b": {
+                    "cost": {
+                        "total_usd": 0.0,
+                        "input_tokens": 75448,
+                        "n_priced_runs": 30,
+                        "output_tokens": 1422,
+                        "mean_usd_per_run": 0.0
+                    },
+                    "n_runs": 30,
+                    "metrics": {
+                        "squad_em": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.03333333333333333,
+                                "high": 0.3
+                            },
+                            "mean": 0.13333333333333333,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.509514326206558,
+                                "high": 0.6914514892105688
+                            },
+                            "mean": 0.5963961520557899,
+                            "ci_omitted_reason": null
+                        },
+                        "cosine_sim": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.7487331532476238,
+                                "high": 0.859185046057066
+                            },
+                            "mean": 0.810084274897176,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.26666666666666666,
+                                "high": 0.8666666666666667
+                            },
+                            "mean": 0.6,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 26,
+                            "ci": {
+                                "low": 0.7582236242116354,
+                                "high": 0.9903846153846154
+                            },
+                            "mean": 0.947008547008547,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 30,
+                            "q1": 25.0,
+                            "q3": 53.0,
+                            "max": 202.0,
+                            "min": 16.0,
+                            "p95": 129.69999999999996,
+                            "median": 32.5
+                        },
+                        "generation_ms": {
+                            "n": 30,
+                            "q1": 5089.0,
+                            "q3": 7416.75,
+                            "max": 14230.0,
+                            "min": 942.0,
+                            "p95": 9115.4,
+                            "median": 6792.5
+                        }
+                    }
+                },
+                "claude-opus-4-8": {
+                    "cost": {
+                        "total_usd": 0.67191,
+                        "input_tokens": 113267,
+                        "n_priced_runs": 30,
+                        "output_tokens": 4223,
+                        "mean_usd_per_run": 0.022397
+                    },
+                    "n_runs": 30,
+                    "metrics": {
+                        "squad_em": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.03333333333333333,
+                                "high": 0.23333333333333334
+                            },
+                            "mean": 0.1,
+                            "ci_omitted_reason": null
+                        },
+                        "squad_f1": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.4778468169092671,
+                                "high": 0.65763892446253
+                            },
+                            "mean": 0.5684667112037509,
+                            "ci_omitted_reason": null
+                        },
+                        "cosine_sim": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.7847221296721971,
+                                "high": 0.9043468366525333
+                            },
+                            "mean": 0.8652724927099449,
+                            "ci_omitted_reason": null
+                        },
+                        "crag_score": {
+                            "n": 30,
+                            "ci": {
+                                "low": 0.6666666666666666,
+                                "high": 1.0
+                            },
+                            "mean": 0.9333333333333333,
+                            "ci_omitted_reason": null
+                        },
+                        "faithfulness": {
+                            "n": 27,
+                            "ci": {
+                                "low": 0.8796296296296297,
+                                "high": 0.9979979979979979
+                            },
+                            "mean": 0.9721471471471472,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "latency_ms": {
+                        "retrieval_ms": {
+                            "n": 30,
+                            "q1": 17.25,
+                            "q3": 27.0,
+                            "max": 41.0,
+                            "min": 10.0,
+                            "p95": 34.949999999999974,
+                            "median": 24.0
+                        },
+                        "generation_ms": {
+                            "n": 30,
+                            "q1": 1908.75,
+                            "q3": 3682.5,
+                            "max": 7491.0,
+                            "min": 1277.0,
+                            "p95": 6457.699999999999,
+                            "median": 2855.5
+                        }
+                    }
+                }
+            },
+            "models": {
+                "baseline": "llama3.1:8b",
+                "treatment": "claude-opus-4-8"
+            },
+            "paired": {
+                "test": "paired Wilcoxon signed-rank, two-sided, zero_method=zsplit",
+                "alpha": 0.05,
+                "family": [
+                    "crag_score",
+                    "faithfulness",
+                    "cosine_sim",
+                    "squad_f1",
+                    "squad_em"
+                ],
+                "metrics": [
+                    {
+                        "note": "Truthfulness: mean CRAG judge score in {-1,0,+1} (PRD 10.3). Headline metric.",
+                        "means": {
+                            "llama3.1:8b": 0.6,
+                            "claude-opus-4-8": 0.9333333333333333
+                        },
+                        "p_raw": 0.06172,
+                        "metric": "crag_score",
+                        "p_holm": 0.24688,
+                        "wilcoxon": {
+                            "ties": 25,
+                            "wins": 5,
+                            "losses": 0,
+                            "method": "permutation (monte carlo, seeded)",
+                            "n_pairs": 30,
+                            "p_value": 0.06172,
+                            "statistic": 162.5
+                        },
+                        "difference": {
+                            "mean": {
+                                "n": 30,
+                                "ci": {
+                                    "low": 0.13333333333333333,
+                                    "high": 0.6666666666666666
+                                },
+                                "mean": 0.3333333333333333,
+                                "ci_omitted_reason": null
+                            },
+                            "median": 0.0,
+                            "direction": "claude-opus-4-8 minus llama3.1:8b"
+                        },
+                        "floor_note": "5 discordant pairs (25 ties) bound the two-sided p at 2/2**5 = 0.0625, above alpha = 0.05: no effect size could reach significance at this discordance count. 6 discordant pairs would be needed.",
+                        "significant": false,
+                        "n_pairs_used": 30,
+                        "omitted_reason": null,
+                        "n_pairs_dropped": 0,
+                        "dropped_question_ids": [
+                        ]
+                    },
+                    {
+                        "note": "Supported statements / total, against the retrieved context (PRD 10.2). NULL for abstentions and for answers that decompose to zero statements, so it has fewer complete pairs than the other metrics.",
+                        "means": {
+                            "llama3.1:8b": 0.947008547008547,
+                            "claude-opus-4-8": 0.9941528066528066
+                        },
+                        "p_raw": 0.2529,
+                        "metric": "faithfulness",
+                        "p_holm": 0.7587,
+                        "wilcoxon": {
+                            "ties": 21,
+                            "wins": 4,
+                            "losses": 1,
+                            "method": "permutation (monte carlo, seeded)",
+                            "n_pairs": 26,
+                            "p_value": 0.2529,
+                            "statistic": 139.5
+                        },
+                        "difference": {
+                            "mean": {
+                                "n": 26,
+                                "ci": {
+                                    "low": 0.0018739893739893854,
+                                    "high": 0.22182729683164715
+                                },
+                                "mean": 0.04714425964425965,
+                                "ci_omitted_reason": null
+                            },
+                            "median": 0.0,
+                            "direction": "claude-opus-4-8 minus llama3.1:8b"
+                        },
+                        "floor_note": "5 discordant pairs (21 ties) bound the two-sided p at 2/2**5 = 0.0625, above alpha = 0.05: no effect size could reach significance at this discordance count. 6 discordant pairs would be needed.",
+                        "significant": false,
+                        "n_pairs_used": 26,
+                        "omitted_reason": null,
+                        "n_pairs_dropped": 4,
+                        "dropped_question_ids": [
+                            "github-q14",
+                            "github-q15",
+                            "netflix-q14",
+                            "netflix-q15"
+                        ]
+                    },
+                    {
+                        "note": "Cosine between embeddings of the generated and the expected answer (PRD 10.5). Both sides use the document prefix: this is an answer-vs-answer comparison, not query-vs-document. Phase 1's own analysis found Spearman rho (cosine_sim, crag_score) = -0.001 across the 15 configurations -- no monotonic relationship to answer quality -- so it is reportable here as a descriptive statistic and not as a proxy for the judge.",
+                        "means": {
+                            "llama3.1:8b": 0.810084274897176,
+                            "claude-opus-4-8": 0.8652724927099449
+                        },
+                        "p_raw": 0.02088,
+                        "metric": "cosine_sim",
+                        "p_holm": 0.10439999999999999,
+                        "wilcoxon": {
+                            "ties": 2,
+                            "wins": 21,
+                            "losses": 7,
+                            "method": "permutation (monte carlo, seeded)",
+                            "n_pairs": 30,
+                            "p_value": 0.02088,
+                            "statistic": 121.5
+                        },
+                        "difference": {
+                            "mean": {
+                                "n": 30,
+                                "ci": {
+                                    "low": -0.04106541222952733,
+                                    "high": 0.1283689418479659
+                                },
+                                "mean": 0.055188217812769134,
+                                "ci_omitted_reason": null
+                            },
+                            "median": 0.035671621571967516,
+                            "direction": "claude-opus-4-8 minus llama3.1:8b"
+                        },
+                        "floor_note": "28 discordant pairs (2 ties) bound the two-sided p at 2/2**28 = 7.45058e-09, at or below alpha = 0.05.",
+                        "significant": false,
+                        "n_pairs_used": 30,
+                        "omitted_reason": null,
+                        "n_pairs_dropped": 0,
+                        "dropped_question_ids": [
+                        ]
+                    },
+                    {
+                        "note": "SQuAD token-overlap F1. Rewards terse answers, so it does not track Truthfulness here — reported because a metric that disagrees is evidence, not noise.",
+                        "means": {
+                            "llama3.1:8b": 0.5963961520557899,
+                            "claude-opus-4-8": 0.5684667112037509
+                        },
+                        "p_raw": 0.51406,
+                        "metric": "squad_f1",
+                        "p_holm": 1.0,
+                        "wilcoxon": {
+                            "ties": 3,
+                            "wins": 11,
+                            "losses": 16,
+                            "method": "permutation (monte carlo, seeded)",
+                            "n_pairs": 30,
+                            "p_value": 0.51406,
+                            "statistic": 200.0
+                        },
+                        "difference": {
+                            "mean": {
+                                "n": 30,
+                                "ci": {
+                                    "low": -0.14288985203044838,
+                                    "high": 0.0731209257746128
+                                },
+                                "mean": -0.02792944085203903,
+                                "ci_omitted_reason": null
+                            },
+                            "median": -0.024951422582316474,
+                            "direction": "claude-opus-4-8 minus llama3.1:8b"
+                        },
+                        "floor_note": "27 discordant pairs (3 ties) bound the two-sided p at 2/2**27 = 1.49012e-08, at or below alpha = 0.05.",
+                        "significant": false,
+                        "n_pairs_used": 30,
+                        "omitted_reason": null,
+                        "n_pairs_dropped": 0,
+                        "dropped_question_ids": [
+                        ]
+                    },
+                    {
+                        "note": "SQuAD exact match. Same terseness caveat as squad_f1.",
+                        "means": {
+                            "llama3.1:8b": 0.13333333333333333,
+                            "claude-opus-4-8": 0.1
+                        },
+                        "p_raw": 0.99692,
+                        "metric": "squad_em",
+                        "p_holm": 1.0,
+                        "wilcoxon": {
+                            "ties": 29,
+                            "wins": 0,
+                            "losses": 1,
+                            "method": "permutation (monte carlo, seeded)",
+                            "n_pairs": 30,
+                            "p_value": 0.99692,
+                            "statistic": 217.5
+                        },
+                        "difference": {
+                            "mean": {
+                                "n": 30,
+                                "ci": {
+                                    "low": -0.16666666666666666,
+                                    "high": 0.0
+                                },
+                                "mean": -0.03333333333333333,
+                                "ci_omitted_reason": null
+                            },
+                            "median": 0.0,
+                            "direction": "claude-opus-4-8 minus llama3.1:8b"
+                        },
+                        "floor_note": "1 discordant pair (29 ties) bound the two-sided p at 2/2**1 = 1, above alpha = 0.05: no effect size could reach significance at this discordance count. 6 discordant pairs would be needed.",
+                        "significant": false,
+                        "n_pairs_used": 30,
+                        "omitted_reason": null,
+                        "n_pairs_dropped": 0,
+                        "dropped_question_ids": [
+                        ]
+                    }
+                ],
+                "direction": "claude-opus-4-8 minus llama3.1:8b; in `wilcoxon`, wins = claude-opus-4-8 ahead",
+                "correction": "holm",
+                "permutation": "seeded Monte Carlo above 20 pairs, exhaustive at or below (PRD 11)",
+                "n_comparisons": 5,
+                "n_significant": 0,
+                "interpretation": "claude-opus-4-8 is separable from llama3.1:8b on 0 of 5 tested metrics after Holm correction at alpha = 0.05, though for any metric whose permutation floor (see floor_note) already exceeds alpha, Holm correction was not the binding constraint.",
+                "floor_note_explanation": "the tie count does not affect the floor because a sign-flip permutation is invariant under flipping a zero difference, so only the discordant-pair count sets the smallest attainable two-sided p"
+            },
+            "subsets": [
+                {
+                    "label": "held_out",
+                    "means": {
+                        "llama3.1:8b": {
+                            "n": 10,
+                            "ci": {
+                                "low": -0.4,
+                                "high": 0.8
+                            },
+                            "mean": 0.4,
+                            "ci_omitted_reason": null
+                        },
+                        "claude-opus-4-8": {
+                            "n": 10,
+                            "ci": null,
+                            "mean": 1.0,
+                            "ci_omitted_reason": "zero variance in sample"
+                        }
+                    },
+                    "metric": "crag_score",
+                    "abstention": {
+                        "models": {
+                            "llama3.1:8b": {
+                                "n_runs": 10,
+                                "recall": null,
+                                "precision": null,
+                                "n_abstained": 0,
+                                "n_unanswerable": 0,
+                                "missed_question_ids": [
+                                ],
+                                "n_correct_abstentions": 0,
+                                "recall_omitted_reason": "no unanswerable questions in this subset",
+                                "precision_omitted_reason": "this arm never abstained",
+                                "false_abstention_question_ids": [
+                                ]
+                            },
+                            "claude-opus-4-8": {
+                                "n_runs": 10,
+                                "recall": null,
+                                "precision": null,
+                                "n_abstained": 0,
+                                "n_unanswerable": 0,
+                                "missed_question_ids": [
+                                ],
+                                "n_correct_abstentions": 0,
+                                "recall_omitted_reason": "no unanswerable questions in this subset",
+                                "precision_omitted_reason": "this arm never abstained",
+                                "false_abstention_question_ids": [
+                                ]
+                            }
+                        },
+                        "detector": "answer text via is_abstention, a cross-language copy of isAbstention in packages/core/src/prompts.ts — not judge_explanation, which is 'abstained' on no rows since the PRD 15 #12 amendment",
+                        "definition": "over unanswerable questions: recall = fraction answered \"I don't know\"; precision = of all \"I don't know\" replies, the fraction that were truly unanswerable (PRD 10.4)",
+                        "detector_caveat": "the predicate matches only the exact phrase, ignoring case, smart quotes and trailing sentence punctuation. A verbose refusal is counted as a non-abstention, so recall is a lower bound — see missed_question_ids"
+                    },
+                    "win_counts": {
+                        "ties": 7,
+                        "wins": {
+                            "llama3.1:8b": 0,
+                            "claude-opus-4-8": 3
+                        },
+                        "metric": "crag_score",
+                        "n_pairs": 10,
+                        "direction": "claude-opus-4-8 minus llama3.1:8b"
+                    },
+                    "description": "questions with questions.phase1 = false — never used to select the Phase-1 winning configuration",
+                    "inferential": false,
+                    "n_questions": 10,
+                    "why_descriptive_only": "n = 10 questions supports no inferential claim, so no p-value is computed for this subset"
+                },
+                {
+                    "label": "phase1_reused",
+                    "means": {
+                        "llama3.1:8b": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.3,
+                                "high": 0.8999999999999999
+                            },
+                            "mean": 0.7,
+                            "ci_omitted_reason": null
+                        },
+                        "claude-opus-4-8": {
+                            "n": 20,
+                            "ci": {
+                                "low": 0.5,
+                                "high": 1.0
+                            },
+                            "mean": 0.9,
+                            "ci_omitted_reason": null
+                        }
+                    },
+                    "metric": "crag_score",
+                    "abstention": {
+                        "models": {
+                            "llama3.1:8b": {
+                                "n_runs": 20,
+                                "recall": 1.0,
+                                "precision": 1.0,
+                                "n_abstained": 4,
+                                "n_unanswerable": 4,
+                                "missed_question_ids": [
+                                ],
+                                "n_correct_abstentions": 4,
+                                "recall_omitted_reason": null,
+                                "precision_omitted_reason": null,
+                                "false_abstention_question_ids": [
+                                ]
+                            },
+                            "claude-opus-4-8": {
+                                "n_runs": 20,
+                                "recall": 0.75,
+                                "precision": 1.0,
+                                "n_abstained": 3,
+                                "n_unanswerable": 4,
+                                "missed_question_ids": [
+                                    "github-q15"
+                                ],
+                                "n_correct_abstentions": 3,
+                                "recall_omitted_reason": null,
+                                "precision_omitted_reason": null,
+                                "false_abstention_question_ids": [
+                                ]
+                            }
+                        },
+                        "detector": "answer text via is_abstention, a cross-language copy of isAbstention in packages/core/src/prompts.ts — not judge_explanation, which is 'abstained' on no rows since the PRD 15 #12 amendment",
+                        "definition": "over unanswerable questions: recall = fraction answered \"I don't know\"; precision = of all \"I don't know\" replies, the fraction that were truly unanswerable (PRD 10.4)",
+                        "detector_caveat": "the predicate matches only the exact phrase, ignoring case, smart quotes and trailing sentence punctuation. A verbose refusal is counted as a non-abstention, so recall is a lower bound — see missed_question_ids"
+                    },
+                    "win_counts": {
+                        "ties": 18,
+                        "wins": {
+                            "llama3.1:8b": 0,
+                            "claude-opus-4-8": 2
+                        },
+                        "metric": "crag_score",
+                        "n_pairs": 20,
+                        "direction": "claude-opus-4-8 minus llama3.1:8b"
+                    },
+                    "description": "questions also used in Phase 1, so the winning configuration was selected partly on them",
+                    "inferential": false,
+                    "n_questions": 20,
+                    "why_descriptive_only": "n = 20 questions supports no inferential claim, so no p-value is computed for this subset"
+                }
+            ],
+            "cost_note": "the baseline is served locally, so its $0 means 'no marginal API cost' and excludes hardware and electricity",
+            "retrieval": {
+                "claim": "both arms retrieved under the same frozen config, k, embedder and query, so retrieval metrics should be identical per question and any difference between the arms is generation-only",
+                "metrics": {
+                    "hit_at_8": {
+                        "note": "Hit rate at k=5. Column name is legacy (k was reduced from 8; PRD 15 #11).",
+                        "identical": true,
+                        "n_differing": 0,
+                        "treatment_estimate": {
+                            "n": 26,
+                            "ci": null,
+                            "mean": 1.0,
+                            "ci_omitted_reason": "zero variance in sample"
+                        },
+                        "differing_question_ids": [
+                        ]
+                    },
+                    "char_recall": {
+                        "note": "Char-span recall; NULL for unanswerable questions (PRD 10.1).",
+                        "identical": true,
+                        "n_differing": 0,
+                        "treatment_estimate": {
+                            "n": 26,
+                            "ci": {
+                                "low": 0.9530364372469636,
+                                "high": 1.0
+                            },
+                            "mean": 0.9906072874493927,
+                            "ci_omitted_reason": null
+                        },
+                        "differing_question_ids": [
+                        ]
+                    },
+                    "char_precision": {
+                        "note": "Char-span precision; NULL for unanswerable questions (PRD 10.1). Intrinsically low: chunks are far larger than gold spans.",
+                        "identical": true,
+                        "n_differing": 0,
+                        "treatment_estimate": {
+                            "n": 26,
+                            "ci": {
+                                "low": 0.018813417217777576,
+                                "high": 0.029177651439330633
+                            },
+                            "mean": 0.02308574911813691,
+                            "ci_omitted_reason": null
+                        },
+                        "differing_question_ids": [
+                        ]
+                    }
+                },
+                "identical": true,
+                "excluded_from_tested_family": "identical per question by construction, so a paired test on these is degenerate and would only inflate the Holm correction"
+            },
+            "abstention": {
+                "models": {
+                    "llama3.1:8b": {
+                        "n_runs": 30,
+                        "recall": 1.0,
+                        "precision": 1.0,
+                        "n_abstained": 4,
+                        "n_unanswerable": 4,
+                        "missed_question_ids": [
+                        ],
+                        "n_correct_abstentions": 4,
+                        "recall_omitted_reason": null,
+                        "precision_omitted_reason": null,
+                        "false_abstention_question_ids": [
+                        ]
+                    },
+                    "claude-opus-4-8": {
+                        "n_runs": 30,
+                        "recall": 0.75,
+                        "precision": 1.0,
+                        "n_abstained": 3,
+                        "n_unanswerable": 4,
+                        "missed_question_ids": [
+                            "github-q15"
+                        ],
+                        "n_correct_abstentions": 3,
+                        "recall_omitted_reason": null,
+                        "precision_omitted_reason": null,
+                        "false_abstention_question_ids": [
+                        ]
+                    }
+                },
+                "detector": "answer text via is_abstention, a cross-language copy of isAbstention in packages/core/src/prompts.ts — not judge_explanation, which is 'abstained' on no rows since the PRD 15 #12 amendment",
+                "definition": "over unanswerable questions: recall = fraction answered \"I don't know\"; precision = of all \"I don't know\" replies, the fraction that were truly unanswerable (PRD 10.4)",
+                "detector_caveat": "the predicate matches only the exact phrase, ignoring case, smart quotes and trailing sentence punctuation. A verbose refusal is counted as a non-abstention, so recall is a lower bound — see missed_question_ids"
+            },
+            "comparison": "claude-opus-4-8 minus llama3.1:8b",
+            "win_counts": {
+                "ties": 25,
+                "wins": {
+                    "llama3.1:8b": 0,
+                    "claude-opus-4-8": 5
+                },
+                "metric": "crag_score",
+                "n_pairs": 30,
+                "direction": "claude-opus-4-8 minus llama3.1:8b"
+            },
+            "n_questions": 30,
+            "metric_notes": {
+                "squad_em": "SQuAD exact match. Same terseness caveat as squad_f1.",
+                "squad_f1": "SQuAD token-overlap F1. Rewards terse answers, so it does not track Truthfulness here — reported because a metric that disagrees is evidence, not noise.",
+                "cosine_sim": "Cosine between embeddings of the generated and the expected answer (PRD 10.5). Both sides use the document prefix: this is an answer-vs-answer comparison, not query-vs-document. Phase 1's own analysis found Spearman rho (cosine_sim, crag_score) = -0.001 across the 15 configurations -- no monotonic relationship to answer quality -- so it is reportable here as a descriptive statistic and not as a proxy for the judge.",
+                "crag_score": "Truthfulness: mean CRAG judge score in {-1,0,+1} (PRD 10.3). Headline metric.",
+                "faithfulness": "Supported statements / total, against the retrieved context (PRD 10.2). NULL for abstentions and for answers that decompose to zero statements, so it has fewer complete pairs than the other metrics."
+            },
+            "headline_metric": "crag_score",
+            "cost_effectiveness": {
+                "arms": {
+                    "llama3.1:8b": {
+                        "n_runs": 30,
+                        "input_usd": 0.0,
+                        "n_correct": 24,
+                        "total_usd": 0.0,
+                        "output_usd": 0.0,
+                        "input_share": null,
+                        "recomputed_total_usd": 0.0,
+                        "usd_per_correct_answer": 0.0,
+                        "recomputed_matches_stored": true
+                    },
+                    "claude-opus-4-8": {
+                        "n_runs": 30,
+                        "input_usd": 0.566335,
+                        "n_correct": 29,
+                        "total_usd": 0.67191,
+                        "output_usd": 0.105575,
+                        "input_share": 0.8428733014838298,
+                        "recomputed_total_usd": 0.67191,
+                        "usd_per_correct_answer": 0.023169310344827585,
+                        "recomputed_matches_stored": true
+                    }
+                },
+                "marginal": {
+                    "direction": "claude-opus-4-8 minus llama3.1:8b",
+                    "additional_usd": 0.67191,
+                    "additional_correct_answers": 5,
+                    "usd_per_additional_correct_answer": 0.134382
+                },
+                "outcome_buckets": [
+                    {
+                        "bucket": "both_correct",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": 0.0,
+                            "mean_output_tokens": 30.958333333333332
+                        },
+                        "n_questions": 24,
+                        "question_ids": [
+                            "github-q01",
+                            "github-q02",
+                            "github-q03",
+                            "github-q04",
+                            "github-q05",
+                            "github-q06",
+                            "github-q07",
+                            "github-q08",
+                            "github-q10",
+                            "github-q14",
+                            "github-q15",
+                            "netflix-q01",
+                            "netflix-q02",
+                            "netflix-q03",
+                            "netflix-q04",
+                            "netflix-q05",
+                            "netflix-q06",
+                            "netflix-q07",
+                            "netflix-q08",
+                            "netflix-q09",
+                            "netflix-q12",
+                            "netflix-q13",
+                            "netflix-q14",
+                            "netflix-q15"
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": 0.021166666666666667,
+                            "mean_output_tokens": 92.125
+                        },
+                        "baseline_correct": true,
+                        "treatment_correct": true
+                    },
+                    {
+                        "bucket": "treatment_only",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": 0.0,
+                            "mean_output_tokens": 120.2
+                        },
+                        "n_questions": 5,
+                        "question_ids": [
+                            "github-q11",
+                            "github-q12",
+                            "github-q13",
+                            "netflix-q10",
+                            "netflix-q11"
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": 0.026446000000000004,
+                            "mean_output_tokens": 300.8
+                        },
+                        "baseline_correct": false,
+                        "treatment_correct": true
+                    },
+                    {
+                        "bucket": "baseline_only",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": null,
+                            "mean_output_tokens": null
+                        },
+                        "n_questions": 0,
+                        "question_ids": [
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": null,
+                            "mean_output_tokens": null
+                        },
+                        "baseline_correct": true,
+                        "treatment_correct": false
+                    },
+                    {
+                        "bucket": "neither",
+                        "llama3.1:8b": {
+                            "mean_usd_per_run": 0.0,
+                            "mean_output_tokens": 78.0
+                        },
+                        "n_questions": 1,
+                        "question_ids": [
+                            "github-q09"
+                        ],
+                        "claude-opus-4-8": {
+                            "mean_usd_per_run": 0.03168,
+                            "mean_output_tokens": 508.0
+                        },
+                        "baseline_correct": false,
+                        "treatment_correct": false
+                    }
+                ],
+                "price_sync_note": "prices are a cross-language copy of MODEL_PRICES in packages/core/src/eval/cost.ts, used only to split a stored cost_usd into input and output halves; recomputed_matches_stored reports the agreement",
+                "input_share_note": "input tokens are fixed by the retrieval configuration (k x chunk size), not by the generator, so an input-dominated bill is controlled by the Phase-1 configuration choice rather than by the choice of model",
+                "correct_definition": "crag_score == 1 (PRD 10.3)",
+                "price_table_usd_per_mtok": {
+                    "llama3.1:8b": {
+                        "input": 0.0,
+                        "output": 0.0
+                    },
+                    "claude-opus-4-8": {
+                        "input": 5.0,
+                        "output": 25.0
+                    }
+                }
+            },
+            "token_comparability_note": "input/output token counts are not comparable across arms: each model counts with its own tokenizer, so a byte-identical prompt yields different totals. They are reported per arm for cost arithmetic, not as a comparison"
+        },
+        "analysis": "phase2_paired"
+    }
+]

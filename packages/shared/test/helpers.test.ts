@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { formatMeanCI, formatMs, formatUSD } from "../src/format";
-import { boxStats, heatColor, linearScale, SEQ_RAMP } from "../src/scale";
+import { formatMeanCI, formatMs, formatUSD, formatUnitUSD } from "../src/format";
+import { heatColor, linearScale, SEQ_RAMP } from "../src/scale";
 import { parseCitations } from "../src/citations";
 
 describe("formatMeanCI", () => {
@@ -30,6 +30,17 @@ describe("formatUSD", () => {
   });
 });
 
+describe("formatUnitUSD", () => {
+  test("keeps four places for a unit rate above a cent", () => {
+    // formatUSD would give "$0.02" here, losing the precision the report cites.
+    expect(formatUnitUSD(0.0232)).toBe("$0.0232");
+    expect(formatUnitUSD(0.134382)).toBe("$0.1344");
+  });
+  test("renders a free arm as an exact zero, not a blank", () => {
+    expect(formatUnitUSD(0)).toBe("$0.0000");
+  });
+});
+
 describe("linearScale", () => {
   test("maps domain to range linearly", () => {
     const s = linearScale([0, 10], [0, 100]);
@@ -56,21 +67,6 @@ describe("heatColor (sequential blue ramp)", () => {
   });
   test("degenerate range uses the middle of the ramp", () => {
     expect(heatColor(0.7, 0.7, 0.7)).toBe(SEQ_RAMP[Math.floor(SEQ_RAMP.length / 2)]);
-  });
-});
-
-describe("boxStats", () => {
-  test("computes five-number summary with interpolated quartiles", () => {
-    const s = boxStats([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(s.min).toBe(1);
-    expect(s.max).toBe(8);
-    expect(s.median).toBe(4.5);
-    expect(s.q1).toBeCloseTo(2.75);
-    expect(s.q3).toBeCloseTo(6.25);
-  });
-  test("single value collapses the box", () => {
-    const s = boxStats([42]);
-    expect(s).toEqual({ min: 42, q1: 42, median: 42, q3: 42, max: 42 });
   });
 });
 

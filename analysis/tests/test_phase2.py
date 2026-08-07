@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from tosrag_analysis import phase2
 from tosrag_analysis.phase2 import (
     ANALYSIS_KEYS,
     BASELINE_MODEL,
@@ -363,9 +364,35 @@ class TestArmSummary:
         summary = build_arm_summary(make_rows(questions=SMALL_QUESTIONS))
         latency = summary[TREATMENT_MODEL]["latency_ms"]
         assert set(latency) == {"retrieval_ms", "generation_ms"}
+        # Each stage is now a five-number summary (+ n, + p95), not just median/p95 —
+        # the box plot needs q1/q3 too.
+        assert set(latency["generation_ms"]) == {
+            "n", "min", "q1", "median", "q3", "max", "p95",
+        }
         assert latency["generation_ms"]["median"] == pytest.approx(1000.0)
         assert latency["generation_ms"]["p95"] == pytest.approx(1000.0)
         assert latency["retrieval_ms"]["n"] == 10
+
+
+class TestLatencySummary:
+    def test_reports_five_number_summary(self):
+        values = [10.0, 20.0, 30.0, 40.0, 50.0]
+        got = phase2._summarise_latency(values)
+        assert got["n"] == 5
+        assert got["min"] == 10.0
+        assert got["q1"] == 20.0
+        assert got["median"] == 30.0
+        assert got["q3"] == 40.0
+        assert got["max"] == 50.0
+
+    def test_is_ordered(self):
+        got = phase2._summarise_latency([50.0, 10.0, 30.0, 20.0, 40.0])
+        assert got["min"] <= got["q1"] <= got["median"] <= got["q3"] <= got["max"]
+
+    def test_handles_single_run(self):
+        got = phase2._summarise_latency([42.0])
+        assert got["n"] == 1
+        assert got["min"] == got["q1"] == got["median"] == got["q3"] == got["max"] == 42.0
 
     def test_cost_totals_and_token_counts(self):
         summary = build_arm_summary(make_rows(questions=SMALL_QUESTIONS))
