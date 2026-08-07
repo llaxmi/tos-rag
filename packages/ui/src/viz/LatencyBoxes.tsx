@@ -1,4 +1,4 @@
-import { boxStats, formatMs, linearScale, MODEL_LABELS } from "@tos-rag/shared";
+import { formatMs, linearScale, MODEL_LABELS } from "@tos-rag/shared";
 import type { LatencySample } from "@tos-rag/shared";
 import { Swatch } from "../Swatch";
 
@@ -40,13 +40,21 @@ function StageBoxes({
   stage: string;
   samples: LatencySample[];
 }) {
+  if (samples.length === 0) {
+    return (
+      <p className="text-muted-foreground text-[12.5px]">
+        No {stage} samples for this stage.
+      </p>
+    );
+  }
+
   const width = 560;
   const rowH = 40;
   const labelW = 128;
   const valueW = 70;
   const headH = 22;
   const height = headH + samples.length * rowH + 6;
-  const maxX = Math.max(...samples.flatMap((s) => s.values)) * 1.06;
+  const maxX = Math.max(...samples.map((s) => s.stats.max)) * 1.06;
   const x = linearScale([0, maxX], [labelW, width - valueW]);
 
   return (
@@ -68,7 +76,7 @@ function StageBoxes({
         {stage.toUpperCase()}
       </text>
       {samples.map((s, i) => {
-        const st = boxStats(s.values);
+        const st = s.stats;
         const y = headH + i * rowH + 8;
         const mid = y + 10;
         const color = MODEL_COLOR[s.model]!;

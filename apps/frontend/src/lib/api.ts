@@ -51,10 +51,19 @@ export async function ask(
   return (await res.json()) as AskResponse;
 }
 
-/** Returns null when the experiment hasn't produced results yet. */
+/**
+ * Returns null when the experiment hasn't produced results yet, and *throws*
+ * when the results couldn't be fetched at all. The two are different findings:
+ * "nothing analysed yet" tells the reader to run `pnpm analyze`, while an
+ * unreachable or erroring backend must not be reported as an empty database.
+ */
 export async function getResults(): Promise<AnalysisRow[] | null> {
   const res = await fetch("/api/results");
-  if (!res.ok) return null;
+  if (!res.ok) {
+    throw new Error(
+      `The results service couldn't answer (HTTP ${res.status}). Check that the backend and its database are running.`,
+    );
+  }
   const body = (await res.json()) as { results: AnalysisRow[] };
   return body.results.length > 0 ? body.results : null;
 }

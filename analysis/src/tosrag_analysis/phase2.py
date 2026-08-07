@@ -19,6 +19,7 @@ import numpy as np
 
 from .phase1 import ShapeError
 from .stats import clean_values, estimate, holm, paired_wilcoxon
+from .stats import summarise_latency as _summarise_latency
 
 # Re-exported so callers can catch one shape error for either phase; `cli.py` has a
 # single `except ShapeError` and should not have to know which module raised.
@@ -398,11 +399,6 @@ def build_paired_comparisons(rows: Sequence[Phase2Row], alpha: float = 0.05) -> 
     }
 
 
-def _percentile(values: Iterable[float | None], q: float) -> float | None:
-    arr = clean_values(values)
-    return float(np.percentile(arr, q)) if arr.size else None
-
-
 def _sum_int(rows: Iterable[Phase2Row], field: str) -> int | None:
     present = [getattr(r, field) for r in rows if getattr(r, field) is not None]
     return int(sum(present)) if present else None
@@ -411,9 +407,10 @@ def _sum_int(rows: Iterable[Phase2Row], field: str) -> int | None:
 def build_arm_summary(rows: Sequence[Phase2Row]) -> dict:
     """Per model: metric estimates, latency by stage, cost and tokens.
 
-    Latency is median + p95 per PRD 10.5 rather than a mean, because a single slow
-    generation dominates a mean at n = 30 and the report needs the typical case and
-    the tail stated separately.
+    Latency is a five-number summary (min/q1/median/q3/max) + p95 per PRD 10.5 rather
+    than a mean, because a single slow generation dominates a mean at n = 30 and the
+    report needs the typical case, the spread, and the tail stated separately — the
+    quartiles feed the dashboard's box plot.
     """
     summary: dict[str, dict] = {}
     for model, model_rows in sorted(_by_model(rows).items()):
@@ -425,11 +422,7 @@ def build_arm_summary(rows: Sequence[Phase2Row]) -> dict:
                 for metric in TESTED_METRICS
             },
             "latency_ms": {
-                stage: {
-                    "median": _percentile(_values(model_rows, stage), 50),
-                    "p95": _percentile(_values(model_rows, stage), 95),
-                    "n": int(clean_values(_values(model_rows, stage)).size),
-                }
+                stage: _summarise_latency(_values(model_rows, stage))
                 for stage in ("retrieval_ms", "generation_ms")
             },
             "cost": {
