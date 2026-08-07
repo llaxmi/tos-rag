@@ -29,6 +29,33 @@ describe("parseAnalysis", () => {
     expect(top.charRecall!.n).toBe(16);
   });
 
+  it("reads the winner-vs-rest paired tests, which is what establishes separability", () => {
+    const d = parseAnalysis(ROWS);
+    expect(d.bestVsRest).not.toBeNull();
+    expect(d.bestVsRest!.nComparisons).toBe(14);
+    expect(d.bestVsRest!.nSignificant).toBe(0);
+    expect(d.bestVsRest!.winner).toBe("sentence:512");
+    expect(d.bestVsRest!.correction).toBe("holm");
+    expect(d.bestVsRest!.alpha).toBe(0.05);
+    expect(d.bestVsRest!.interpretation).toContain("0 of 14");
+  });
+
+  it("nulls bestVsRest rather than defaulting its counts when the payload is absent", () => {
+    const d = parseAnalysis(
+      ROWS.filter((r) => r.analysis !== "phase1_best_vs_rest"),
+    );
+    expect(d.bestVsRest).toBeNull();
+    expect(d.phase1).not.toBeNull();
+  });
+
+  it("nulls bestVsRest when a required count is missing, never coercing it to 0", () => {
+    const row = ROWS.find((r) => r.analysis === "phase1_best_vs_rest")!;
+    const payload = { ...(row.payload as Record<string, unknown>) };
+    delete payload["n_significant"];
+    const d = parseAnalysis([{ analysis: "phase1_best_vs_rest", payload }]);
+    expect(d.bestVsRest).toBeNull();
+  });
+
   it("reads the factor breakdowns rather than averaging config rows", () => {
     const d = parseAnalysis(ROWS);
     expect(d.bySize!.map((l) => l.label)).toEqual(

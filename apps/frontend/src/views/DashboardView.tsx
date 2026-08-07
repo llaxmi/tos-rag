@@ -90,13 +90,23 @@ function MeanCI({ value, strong }: { value: MetricValue | null; strong?: boolean
 
 /** Shown in place of a figure whose payload has not been computed. The
  *  dashboard states the absence rather than filling it with a plausible
- *  number — the same rule the report follows for unmeasured values. */
-function NoData({ what }: { what: string }) {
+ *  number — the same rule the report follows for unmeasured values.
+ *
+ *  `failed` distinguishes "the analysis has not been run" from "we could not
+ *  ask": telling a reader to run `pnpm analyze` when the backend is simply
+ *  unreachable is a wrong diagnosis, not a missing one. */
+function NoData({ what, failed }: { what: string; failed?: boolean }) {
   return (
     <Card className="border-dashed p-8">
       <p className="text-muted-foreground text-[13.5px]">
-        No {what} in the database yet. Run <code className="font-mono">pnpm analyze</code>{" "}
-        to compute it.
+        {failed ? (
+          <>Couldn't load {what} — the results service is unavailable.</>
+        ) : (
+          <>
+            No {what} in the database yet. Run{" "}
+            <code className="font-mono">pnpm analyze</code> to compute it.
+          </>
+        )}
       </p>
     </Card>
   );
@@ -171,9 +181,13 @@ export function DashboardView() {
         <div className="mt-7 flex flex-wrap items-center gap-8">
           {rows && <ContactSheet rows={rows} winner={PHASE1_WINNER} />}
           <div className="min-w-65 flex-1">
+            {/* Counts are interpolated from the parsed payloads, never
+                hardcoded — and the provenance claim is only made when there is
+                something below it to trace. */}
             <p className="text-ink-soft max-w-[46ch] text-[15px]">
-              15 chunking configurations, two generators, 360 runs — every
-              number below traces back to a stored run in Postgres.
+              {rows
+                ? `${rows.length} chunking configurations, two generators — every number below traces back to a stored run in Postgres.`
+                : "Every figure below is read from the stored analysis results; nothing on this page is computed in the browser."}
             </p>
             <p className="text-muted-foreground mt-4.5 flex items-baseline gap-2.5 text-[11.5px] font-bold uppercase tracking-[0.12em]">
               Best configuration
@@ -324,7 +338,7 @@ export function DashboardView() {
               </Table>
             </Card>
             ) : (
-              <NoData what="Phase-1 configuration ranking" />
+              <NoData what="Phase-1 configuration ranking" failed={loadFailed} />
             )}
           </Section>
 
@@ -351,15 +365,26 @@ export function DashboardView() {
                         {PHASE1_WINNER.strategy} × {PHASE1_WINNER.chunkSize}
                       </span>
                       , is the configuration carried into Phase 2 — ranked first
-                      on truthfulness, though the overlapping intervals in §1
-                      mean the grid does not separate the configurations
-                      statistically.
+                      on truthfulness.
                     </p>
+                    {/* Separability is a stored result of the paired tests, not
+                        something read off overlapping intervals. */}
+                    {data?.bestVsRest && (
+                      <p className="text-muted-foreground mt-3 text-[13px] leading-relaxed">
+                        Separability is measured, not eyeballed: the winner was
+                        tested against each of the other{" "}
+                        {data.bestVsRest.nComparisons} configurations with paired
+                        Wilcoxon tests, {data.bestVsRest.correction}-corrected at
+                        α = {data.bestVsRest.alpha}, of which{" "}
+                        {data.bestVsRest.nSignificant} reached significance. The
+                        analysis records it as: “{data.bestVsRest.interpretation}”
+                      </p>
+                    )}
                   </div>
                 </div>
               </Card>
             ) : (
-              <NoData what="Phase-1 configuration ranking" />
+              <NoData what="Phase-1 configuration ranking" failed={loadFailed} />
             )}
           </Section>
 
@@ -379,7 +404,7 @@ export function DashboardView() {
                   <FactorBars items={byStrategy} ariaLabel="Mean truthfulness by chunking strategy" />
                 </Card>
               ) : (
-                <NoData what="per-strategy factor analysis" />
+                <NoData what="per-strategy factor analysis" failed={loadFailed} />
               )}
               {bySize ? (
                 <Card className="gap-0 p-5">
@@ -394,7 +419,7 @@ export function DashboardView() {
                   </p>
                 </Card>
               ) : (
-                <NoData what="per-size factor analysis" />
+                <NoData what="per-size factor analysis" failed={loadFailed} />
               )}
             </div>
           </Section>
@@ -404,7 +429,11 @@ export function DashboardView() {
             id="sec-4"
             eyebrow="§4 · Phase 2 — Generators"
             title="Claude Opus 4.8 vs Llama 3.1 8B"
-            lead="Paired comparison over all 30 questions under the winning config. Exact Wilcoxon signed-rank p-values with Holm correction."
+            lead={
+              data?.phase2
+                ? `Paired comparison over ${data.phase2.nQuestions} questions under the winning config. Exact Wilcoxon signed-rank p-values with Holm correction.`
+                : "Paired comparison under the winning config. Exact Wilcoxon signed-rank p-values with Holm correction."
+            }
           >
             {data?.phase2 ? (
               <>
@@ -415,7 +444,7 @@ export function DashboardView() {
                 </div>
               </>
             ) : (
-              <NoData what="Phase-2 paired comparison" />
+              <NoData what="Phase-2 paired comparison" failed={loadFailed} />
             )}
           </Section>
 
@@ -447,15 +476,17 @@ export function DashboardView() {
                     Read it this way
                   </p>
                   <p className="text-ink-soft text-[13px] leading-relaxed">
-                    Both arms share one retrieval path — same config, same k, same
-                    embedder — so the stacked bars differ only in their generation
-                    segment. The box plots below show the spread behind those
-                    medians.
+                    Both arms retrieve the same chunks — same config, same k, same
+                    embedder — so what the generators are given is identical and
+                    the comparison in §4 is generation-only. The retrieval times
+                    still differ between the arms; at this scale that is machine
+                    noise, not a difference in work done. The box plots show the
+                    spread behind each median.
                   </p>
                 </div>
               </div>
             ) : (
-              <NoData what="Phase-2 latency" />
+              <NoData what="Phase-2 latency" failed={loadFailed} />
             )}
           </Section>
 
@@ -529,7 +560,7 @@ export function DashboardView() {
                 )}
               </>
             ) : (
-              <NoData what="Phase-2 token cost" />
+              <NoData what="Phase-2 token cost" failed={loadFailed} />
             )}
           </Section>
         </div>

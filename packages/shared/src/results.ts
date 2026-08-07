@@ -53,6 +53,20 @@ export interface ConfigRow extends ConfigMetrics {
   latency: { retrievalMs: FiveNumber; generationMs: FiveNumber } | null;
 }
 
+/** The winner tested against every other configuration (PRD §11). Whether the
+ *  sweep separates its configurations at all is established by these paired
+ *  tests, not by whether the per-config intervals happen to overlap. */
+export interface BestVsRest {
+  winner: string;
+  metric: string;
+  nComparisons: number;
+  nSignificant: number;
+  alpha: number;
+  correction: string;
+  /** The analysis step's own one-sentence summary; rendered verbatim. */
+  interpretation: string;
+}
+
 /** One level of an isolated factor (a strategy, or a chunk size). */
 export interface FactorLevel {
   label: string;
@@ -115,6 +129,7 @@ export interface JudgeValidation {
 export interface DashboardData {
   phase1: ConfigRow[] | null;
   winner: string | null;
+  bestVsRest: BestVsRest | null;
   byStrategy: FactorLevel[] | null;
   bySize: FactorLevel[] | null;
   phase2: PairedTable | null;
@@ -207,6 +222,23 @@ function parseConfigRanking(payload: unknown): {
   if (rows.length === 0) return null;
   rows.sort((a, b) => a.rank - b.rank);
   return { rows, winner: str(payload["winner"]) };
+}
+
+function parseBestVsRest(payload: unknown): BestVsRest | null {
+  if (!isRecord(payload)) return null;
+  const nComparisons = num(payload["n_comparisons"]);
+  const nSignificant = num(payload["n_significant"]);
+  const interpretation = str(payload["interpretation"]);
+  if (nComparisons === null || nSignificant === null || !interpretation) return null;
+  return {
+    winner: str(payload["winner"]) ?? "",
+    metric: str(payload["metric"]) ?? "",
+    nComparisons,
+    nSignificant,
+    alpha: num(payload["alpha"]) ?? 0.05,
+    correction: str(payload["correction"]) ?? "",
+    interpretation,
+  };
 }
 
 function parseFactor(payload: unknown): FactorLevel[] | null {
@@ -379,7 +411,7 @@ function parseJudge(payload: unknown): JudgeValidation | null {
 }
 
 const EMPTY: DashboardData = {
-  phase1: null, winner: null, byStrategy: null, bySize: null,
+  phase1: null, winner: null, bestVsRest: null, byStrategy: null, bySize: null,
   phase2: null, heldOut: null, latency: null, cost: null,
   costNote: null, tokenComparabilityNote: null, judge: null,
 };
@@ -404,6 +436,7 @@ export function parseAnalysis(rows: AnalysisRow[]): DashboardData {
     ...EMPTY,
     phase1: ranking?.rows ?? null,
     winner: ranking?.winner ?? null,
+    bestVsRest: parseBestVsRest(by.get("phase1_best_vs_rest")),
     byStrategy: parseFactor(by.get("phase1_factor_strategy")),
     bySize: parseFactor(by.get("phase1_factor_size")),
     phase2:

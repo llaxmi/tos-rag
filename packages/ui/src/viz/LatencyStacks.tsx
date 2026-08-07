@@ -16,15 +16,21 @@ interface ModelTotals {
 
 export function LatencyStacks({ samples }: { samples: LatencySample[] }) {
   const models = ["llama", "opus"] as const;
-  // Total rather than `!`-asserted: an arm can be missing from the payload.
-  const stageMedian = (model: string, stage: string): number =>
-    samples.find((s) => s.model === model && s.stage === stage)?.stats.median ?? 0;
+  // An arm can be missing from the payload. A missing median is null, never 0 —
+  // a zero-length segment would read as "instant" rather than "unmeasured", so
+  // the whole row is dropped instead.
+  const stageMedian = (model: string, stage: string): number | null =>
+    samples.find((s) => s.model === model && s.stage === stage)?.stats.median ??
+    null;
 
-  const rows: ModelTotals[] = models.map((model) => ({
-    model,
-    retrievalMs: stageMedian(model, "retrieval"),
-    generationMs: stageMedian(model, "generation"),
-  }));
+  const rows: ModelTotals[] = models.flatMap((model) => {
+    const retrievalMs = stageMedian(model, "retrieval");
+    const generationMs = stageMedian(model, "generation");
+    if (retrievalMs === null || generationMs === null) return [];
+    return [{ model, retrievalMs, generationMs }];
+  });
+
+  if (rows.length === 0) return null;
 
   const width = 500;
   const barH = 30;
