@@ -135,7 +135,12 @@ export function wilcoxonMethodPhrase(table: PairedTable | null): string | null {
   const methods = new Set(
     table.rows.map((r) => r.method).filter((m): m is string => m !== null),
   );
-  if (methods.size !== 1) return null;
+  // A null method on any row means that row never reported a method — it is
+  // unconfirmed, not an implicit agreement with the rows that did report
+  // one. Excluding nulls from the set before checking size would treat that
+  // row as if it matched, which is the same class of false claim finding 2
+  // targeted, just one row lighter.
+  if (methods.size !== 1 || !table.rows.every((r) => r.method !== null)) return null;
   const [method] = methods;
   if (method === NO_TEST_METHOD) return null;
   return `via ${method}`;

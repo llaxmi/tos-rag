@@ -240,4 +240,18 @@ describe("wilcoxonMethodPhrase", () => {
     const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
     expect(wilcoxonMethodPhrase(d.phase2)).toBeNull();
   });
+
+  it("returns null when one row has no method, even though the rest agree", () => {
+    const payload = phase2Payload();
+    const metrics = pairedMetrics(payload);
+    // Every other row keeps the fixture's "permutation (monte carlo, seeded)";
+    // this one alone never reported a method. A missing method must not be
+    // read as implicit agreement with the rows that did report one.
+    delete (metrics[0]!["wilcoxon"] as Record<string, unknown>)["method"];
+    const d = parseAnalysis([{ analysis: "phase2_paired", payload }]);
+    expect(
+      d.phase2!.rows.find((r) => r.metric === metrics[0]!["metric"])!.method,
+    ).toBeNull();
+    expect(wilcoxonMethodPhrase(d.phase2)).toBeNull();
+  });
 });
