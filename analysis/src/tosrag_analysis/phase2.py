@@ -17,7 +17,9 @@ from typing import Callable, Iterable, Sequence
 
 import numpy as np
 
-from .phase1 import ShapeError
+from .grid import ShapeError, assert_complete_grid, group_by
+from .grid import mean_or_none as _mean_or_none
+from .grid import values as _values
 from .stats import clean_values, estimate, holm, paired_wilcoxon
 from .stats import summarise_latency as _summarise_latency
 
@@ -133,55 +135,25 @@ def assert_phase2_shape(
     expected_models: Sequence[str] = EXPECTED_MODELS,
     expected_questions: int = EXPECTED_QUESTIONS,
 ) -> None:
-    """Fail loudly before computing anything.
+    """Assert the loaded rows are a complete 2-model x 30-question grid.
 
-    A missing pair does not error in a paired test — it silently shrinks n and shifts
-    every mean. Same reasoning as `assert_phase1_shape`.
+    A missing pair does not error in a paired test — it silently shrinks n and
+    shifts every mean.
     """
-    if not rows:
-        raise ShapeError("no Phase-2 rows found — has run-phase2 been run against this database?")
-
-    models = sorted({r.model for r in rows})
-    if models != sorted(expected_models):
-        raise ShapeError(f"expected models {sorted(expected_models)}, found {models}")
-
-    questions_by_model = {m: sorted(r.question_id for r in rows if r.model == m) for m in models}
-    reference = questions_by_model[models[0]]
-    if len(reference) != expected_questions:
-        raise ShapeError(
-            f"expected {expected_questions} questions per model, "
-            f"model {models[0]} has {len(reference)}"
-        )
-    for model, questions in questions_by_model.items():
-        if questions != reference:
-            missing = sorted(set(reference) - set(questions))
-            extra = sorted(set(questions) - set(reference))
-            raise ShapeError(
-                f"model {model} does not cover the same question set as {models[0]} "
-                f"(missing: {missing}, unexpected: {extra}) — the paired test requires identical pairing"
-            )
-
-    if len(rows) != len(expected_models) * expected_questions:
-        raise ShapeError(
-            f"expected {len(expected_models) * expected_questions} rows, got {len(rows)} "
-            "(duplicate runs for the same model/question?)"
-        )
+    assert_complete_grid(
+        rows,
+        key=lambda r: r.model,
+        noun="model",
+        noun_plural="models",
+        expected_groups=expected_models,
+        expected_questions=expected_questions,
+        phase_label="Phase-2",
+        run_command="run-phase2",
+    )
 
 
 def _by_model(rows: Sequence[Phase2Row]) -> dict[str, list[Phase2Row]]:
-    grouped: dict[str, list[Phase2Row]] = {}
-    for row in rows:
-        grouped.setdefault(row.model, []).append(row)
-    return {model: sorted(rs, key=lambda r: r.question_id) for model, rs in grouped.items()}
-
-
-def _values(rows: Iterable[Phase2Row], metric: str) -> list[float | None]:
-    return [r.metric(metric) for r in rows]
-
-
-def _mean_or_none(values: Iterable[float | None]) -> float | None:
-    present = clean_values(values)
-    return float(present.mean()) if present.size else None
+    return group_by(rows, lambda r: r.model)
 
 
 @dataclass(frozen=True)
@@ -436,6 +408,203 @@ def build_arm_summary(rows: Sequence[Phase2Row]) -> dict:
     return summary
 
 
+# Published USD prices per million tokens. A cross-language copy of `MODEL_PRICES` in
+# `packages/core/src/eval/cost.ts` and must stay in sync with it, the same way
+# `is_abstention` copies `isAbstention`. It exists here only to split an already-stored
+# `cost_usd` into its input and output halves — the stored total is still the figure of
+# record, and `build_cost_effectiveness` recomputes it from these prices and reports the
+# agreement rather than assuming it.
+MODEL_PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
+    TREATMENT_MODEL: (5.0, 25.0),
+    BASELINE_MODEL: (0.0, 0.0),  # served locally by Ollama
+}
+
+# A run counts as correct at the top of the CRAG scale. 0 (Missing/abstention) and -1
+# (hallucination) are both "not correct", but they are not the same failure, so the
+# bucket table below keeps the raw scores alongside the boolean.
+CORRECT_CRAG_SCORE = 1.0
+
+# Tolerance on recomputed-vs-stored cost. `evals.cost_usd` is Decimal(10,6) and is
+# rounded per run, so a 30-run sum can drift by up to 30 * 5e-7 from one computed off
+# summed tokens; anything larger means the price table here has fallen out of sync.
+_COST_MATCH_TOLERANCE_USD = 1e-4
+
+
+def _cost_split(model: str, input_tokens: int | None, output_tokens: int | None) -> dict:
+    """Input vs output share of one arm's bill, from summed tokens and the price table.
+
+    Reported because it is the actionable half of the cost finding: input tokens are set
+    by the retrieval configuration (k x chunk size), not by the generator, so a bill
+    dominated by input is a bill controlled by a Chapter 5 decision rather than a
+    Chapter 6 one.
+    """
+    price = MODEL_PRICES_USD_PER_MTOK.get(model)
+    if price is None or input_tokens is None or output_tokens is None:
+        return {
+            "input_usd": None,
+            "output_usd": None,
+            "input_share": None,
+            "recomputed_total_usd": None,
+        }
+    input_usd = input_tokens * price[0] / 1e6
+    output_usd = output_tokens * price[1] / 1e6
+    total = input_usd + output_usd
+    return {
+        "input_usd": input_usd,
+        "output_usd": output_usd,
+        # Undefined rather than 0 for a free arm: a $0 bill has no meaningful split.
+        "input_share": (input_usd / total) if total > 0 else None,
+        "recomputed_total_usd": total,
+    }
+
+
+def build_cost_effectiveness(rows: Sequence[Phase2Row]) -> dict:
+    """Cost expressed against quality, not in isolation (PRD 10.5).
+
+    "The paid model costs more" is true by construction and is not a finding. The three
+    quantities that are: cost per *correct* answer, the marginal price of the accuracy
+    the treatment arm buys, and the input/output split that says which pipeline decision
+    controls the bill.
+
+    Token counts are deliberately not compared across arms anywhere in here — each model
+    tokenises the same prompt differently (see `token_comparability_note`). They are
+    compared only within an arm, and across arms only after being priced into dollars.
+    """
+    grouped = _by_model(rows)
+    arms: dict[str, dict] = {}
+    for model, model_rows in sorted(grouped.items()):
+        priced = [r.cost_usd for r in model_rows if r.cost_usd is not None]
+        total = float(sum(priced)) if priced else None
+        n_correct = sum(1 for r in model_rows if r.crag_score == CORRECT_CRAG_SCORE)
+        split = _cost_split(
+            model,
+            _sum_int(model_rows, "input_tokens"),
+            _sum_int(model_rows, "output_tokens"),
+        )
+        recomputed = split["recomputed_total_usd"]
+        arms[model] = {
+            "n_runs": len(model_rows),
+            "n_correct": n_correct,
+            "total_usd": total,
+            # 0.0 for the local arm is the finding, not a missing measurement; None only
+            # when there is no correct answer to divide by.
+            "usd_per_correct_answer": (
+                total / n_correct if total is not None and n_correct > 0 else None
+            ),
+            **{k: v for k, v in split.items() if k != "recomputed_total_usd"},
+            "recomputed_total_usd": recomputed,
+            "recomputed_matches_stored": (
+                None
+                if total is None or recomputed is None
+                else abs(total - recomputed) <= _COST_MATCH_TOLERANCE_USD
+            ),
+        }
+
+    treatment = arms.get(TREATMENT_MODEL, {})
+    baseline = arms.get(BASELINE_MODEL, {})
+    extra_correct = treatment.get("n_correct", 0) - baseline.get("n_correct", 0)
+    extra_usd = (treatment.get("total_usd") or 0.0) - (baseline.get("total_usd") or 0.0)
+
+    return {
+        "correct_definition": f"crag_score == {CORRECT_CRAG_SCORE:g} (PRD 10.3)",
+        "arms": arms,
+        "marginal": {
+            "direction": f"{TREATMENT_MODEL} minus {BASELINE_MODEL}",
+            "additional_correct_answers": extra_correct,
+            "additional_usd": extra_usd,
+            # Undefined when the treatment arm bought no additional correct answers:
+            # a negative or infinite "price per correction" would read as a measurement.
+            "usd_per_additional_correct_answer": (
+                extra_usd / extra_correct if extra_correct > 0 else None
+            ),
+        },
+        "outcome_buckets": build_outcome_buckets(rows),
+        "price_table_usd_per_mtok": {
+            model: {"input": price[0], "output": price[1]}
+            for model, price in sorted(MODEL_PRICES_USD_PER_MTOK.items())
+        },
+        "price_sync_note": (
+            "prices are a cross-language copy of MODEL_PRICES in "
+            "packages/core/src/eval/cost.ts, used only to split a stored cost_usd into "
+            "input and output halves; recomputed_matches_stored reports the agreement"
+        ),
+        "input_share_note": (
+            "input tokens are fixed by the retrieval configuration (k x chunk size), not "
+            "by the generator, so an input-dominated bill is controlled by the Phase-1 "
+            "configuration choice rather than by the choice of model"
+        ),
+    }
+
+
+# Every (treatment correct?, baseline correct?) combination, in reporting order, with
+# the label the payload and the report use for it.
+_OUTCOME_BUCKETS: tuple[tuple[str, bool, bool], ...] = (
+    ("both_correct", True, True),
+    ("treatment_only", True, False),
+    ("baseline_only", False, True),
+    ("neither", False, False),
+)
+
+# The buckets partition the (treatment, baseline) outcome space, so a lookup is
+# total — every pair lands in exactly one bucket.
+_BUCKET_BY_OUTCOME: dict[tuple[bool, bool], str] = {
+    (treatment, baseline): name for name, treatment, baseline in _OUTCOME_BUCKETS
+}
+
+
+def build_outcome_buckets(rows: Sequence[Phase2Row]) -> list[dict]:
+    """Per-question outcomes, with the answer length each arm spent on them.
+
+    The only per-question quantity worth comparing across arms is output length: both
+    arms receive the identical retrieved context (see `build_retrieval_identity`), so
+    input length carries no signal beyond the tokeniser difference. Grouping it by
+    outcome is what shows whether the treatment arm's extra spend lands on the questions
+    it actually fixes.
+
+    Pairing goes through `pair_metric`, so a NULL headline score raises rather than
+    quietly dropping a question out of the buckets.
+    """
+    pair = pair_metric(rows, HEADLINE_METRIC)
+    grouped = _by_model(rows)
+    by_question = {
+        model: {r.question_id: r for r in model_rows} for model, model_rows in grouped.items()
+    }
+
+    outcomes: dict[str, list[str]] = {name: [] for name, _, _ in _OUTCOME_BUCKETS}
+    for qid, a, b in zip(pair.used, pair.a, pair.b):
+        key = (a == CORRECT_CRAG_SCORE, b == CORRECT_CRAG_SCORE)
+        outcomes[_BUCKET_BY_OUTCOME[key]].append(qid)
+
+    buckets = []
+    for name, treatment_correct, baseline_correct in _OUTCOME_BUCKETS:
+        question_ids = outcomes[name]
+        bucket: dict = {
+            "bucket": name,
+            "treatment_correct": treatment_correct,
+            "baseline_correct": baseline_correct,
+            "n_questions": len(question_ids),
+            "question_ids": question_ids,
+        }
+        for model in (TREATMENT_MODEL, BASELINE_MODEL):
+            model_rows = [
+                by_question.get(model, {})[qid]
+                for qid in question_ids
+                if qid in by_question.get(model, {})
+            ]
+            output_tokens = [
+                float(r.output_tokens) for r in model_rows if r.output_tokens is not None
+            ]
+            costs = [float(r.cost_usd) for r in model_rows if r.cost_usd is not None]
+            bucket[model] = {
+                "mean_output_tokens": (
+                    sum(output_tokens) / len(output_tokens) if output_tokens else None
+                ),
+                "mean_usd_per_run": (sum(costs) / len(costs) if costs else None),
+            }
+        buckets.append(bucket)
+    return buckets
+
+
 def build_retrieval_identity(rows: Sequence[Phase2Row]) -> dict:
     """Check, rather than assume, that both arms retrieved the same spans.
 
@@ -583,6 +752,7 @@ def build_paired_analysis(rows: Sequence[Phase2Row], alpha: float = 0.05) -> dic
             "excludes hardware and electricity"
         ),
         "arms": build_arm_summary(rows),
+        "cost_effectiveness": build_cost_effectiveness(rows),
         "paired": build_paired_comparisons(rows, alpha),
         "win_counts": build_win_counts(rows),
         "retrieval": build_retrieval_identity(rows),
