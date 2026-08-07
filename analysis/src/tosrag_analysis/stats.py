@@ -89,6 +89,30 @@ def clean_values(values: Iterable[float | None]) -> np.ndarray:
     return np.asarray([float(v) for v in values if v is not None], dtype=float)
 
 
+def summarise_latency(values: Iterable[float | None]) -> dict[str, float | int | None]:
+    """Five-number summary (+ n, + p95) of a latency stage, in milliseconds.
+
+    Shared by Phase 1 (`phase1.build_config_ranking`) and Phase 2
+    (`phase2.build_arm_summary`) so the box-plot data the dashboard reads has one
+    percentile convention across both payloads — `np.percentile`, the same one `p95`
+    already used here, so `median` stays byte-identical to what was stored before the
+    quartiles were added. NULLs are dropped via `clean_values`, never coerced to 0.
+    """
+    arr = clean_values(values)
+    if arr.size == 0:
+        return {"n": 0, "min": None, "q1": None, "median": None, "q3": None, "max": None, "p95": None}
+    arr = np.sort(arr)
+    return {
+        "n": int(arr.size),
+        "min": float(arr[0]),
+        "q1": float(np.percentile(arr, 25)),
+        "median": float(np.percentile(arr, 50)),
+        "q3": float(np.percentile(arr, 75)),
+        "max": float(arr[-1]),
+        "p95": float(np.percentile(arr, 95)),
+    }
+
+
 def bca_ci(
     values: Iterable[float | None],
     seed: int = BOOTSTRAP_SEED,

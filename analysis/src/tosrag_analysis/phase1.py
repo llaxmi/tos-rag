@@ -10,7 +10,7 @@ from typing import Callable, Iterable, Sequence
 
 import numpy as np
 
-from .stats import Estimate, clean_values, estimate, holm, paired_wilcoxon
+from .stats import Estimate, clean_values, estimate, holm, paired_wilcoxon, summarise_latency
 
 EXPECTED_CONFIGS = 15  # 5 strategies x 3 chunk sizes
 EXPECTED_QUESTIONS = 20  # Round-1 questions (PRD 7)
@@ -161,6 +161,12 @@ def build_config_ranking(rows: Sequence[Row]) -> dict:
                 "metrics": {
                     metric: estimate(_values(config_rows, metric)).as_dict()
                     for metric in METRIC_NOTES
+                },
+                # Sibling to the mean+CI estimates above: a five-number summary per
+                # stage, for the dashboard's per-config latency box plot (PRD 10.5).
+                "latency_ms": {
+                    stage: summarise_latency(_values(config_rows, stage))
+                    for stage in ("retrieval_ms", "generation_ms")
                 },
             }
         )

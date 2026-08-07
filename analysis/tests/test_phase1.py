@@ -131,6 +131,14 @@ class TestRanking:
         assert metrics["char_recall"]["n"] == 18
         assert metrics[HEADLINE_METRIC]["n"] == 20
 
+    def test_config_ranking_carries_latency_quartiles(self):
+        payload = build_config_ranking(make_rows())
+        first = payload["configs"][0]
+        assert set(first["latency_ms"]) == {"retrieval_ms", "generation_ms"}
+        assert set(first["latency_ms"]["generation_ms"]) == {
+            "n", "min", "q1", "median", "q3", "max", "p95",
+        }
+
 
 class TestFactorAnalysis:
     def test_strategy_levels(self):
