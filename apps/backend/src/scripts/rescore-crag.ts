@@ -21,9 +21,9 @@
  * so it is dry-run by default and needs an explicit `--apply`.
  */
 import "dotenv/config";
-import { pathToFileURL } from "node:url";
 import { RULE_EXPLANATIONS, cragRuleVerdict } from "@tos-rag/core";
 import { prisma } from "@tos-rag/db";
+import { isEntrypoint, runScript } from "./entrypoint";
 
 interface Change {
   runId: bigint;
@@ -120,11 +120,6 @@ async function main(): Promise<void> {
   console.log(`\nApplied. ${changes.length} eval row(s) re-scored.`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main()
-    .catch((err: unknown) => {
-      console.error(err);
-      process.exitCode = 1;
-    })
-    .finally(() => void prisma.$disconnect());
+if (isEntrypoint(import.meta.url)) {
+  runScript(main, { disconnect: true, verbose: true });
 }

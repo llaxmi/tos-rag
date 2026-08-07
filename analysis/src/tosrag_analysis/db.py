@@ -13,9 +13,21 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 
+from .grid import ShapeError
 from .judge import JudgedRow
 from .phase1 import Row
-from .phase2 import Phase2Row, ShapeError
+from .phase2 import Phase2Row
+
+
+# NULL is preserved, never coerced to a number: a missing retrieval metric is a
+# real finding (the 4 unanswerable questions), and 0 is a real CRAG score.
+def _as_float(value) -> float | None:
+    return None if value is None else float(value)
+
+
+def _as_int(value) -> int | None:
+    return None if value is None else int(value)
+
 
 # Phase 1 is Llama-only (PRD 7); Phase 2 adds Opus rows under the same config.
 # Filtering explicitly keeps this analysis correct once those rows exist.
@@ -143,9 +155,6 @@ def load_phase1_rows(dsn: str, model: str = PHASE1_MODEL) -> list[Row]:
         cursor.execute(PHASE1_QUERY, {"model": model})
         records = cursor.fetchall()
 
-    def as_float(value) -> float | None:
-        return None if value is None else float(value)
-
     # Fields are looked up by column name, so reordering a SELECT column can
     # never silently shift every later value into the wrong slot.
     return [
@@ -154,15 +163,15 @@ def load_phase1_rows(dsn: str, model: str = PHASE1_MODEL) -> list[Row]:
             chunk_size=int(record["chunk_size"]),
             question_id=record["question_id"],
             qtype=record["qtype"],
-            crag_score=as_float(record["crag_score"]),
-            char_precision=as_float(record["char_precision"]),
-            char_recall=as_float(record["char_recall"]),
-            hit_at_8=as_float(record["hit_at_8"]),
-            squad_f1=as_float(record["squad_f1"]),
-            squad_em=as_float(record["squad_em"]),
-            faithfulness=as_float(record["faithfulness"]),
-            retrieval_ms=as_float(record["retrieval_ms"]),
-            generation_ms=as_float(record["generation_ms"]),
+            crag_score=_as_float(record["crag_score"]),
+            char_precision=_as_float(record["char_precision"]),
+            char_recall=_as_float(record["char_recall"]),
+            hit_at_8=_as_float(record["hit_at_8"]),
+            squad_f1=_as_float(record["squad_f1"]),
+            squad_em=_as_float(record["squad_em"]),
+            faithfulness=_as_float(record["faithfulness"]),
+            retrieval_ms=_as_float(record["retrieval_ms"]),
+            generation_ms=_as_float(record["generation_ms"]),
         )
         for record in records
     ]
@@ -183,12 +192,6 @@ def load_phase2_rows(dsn: str) -> list[Phase2Row]:
             "the paired comparison assumes a single frozen configuration"
         )
 
-    def as_float(value) -> float | None:
-        return None if value is None else float(value)
-
-    def as_int(value) -> int | None:
-        return None if value is None else int(value)
-
     # Fields are looked up by column name, so reordering a SELECT column can never
     # silently shift every later value into the wrong slot.
     return [
@@ -200,21 +203,21 @@ def load_phase2_rows(dsn: str) -> list[Phase2Row]:
             # held-out set is its complement.
             held_out=not record["phase1"],
             answer=record["answer"] or "",
-            crag_score=as_float(record["crag_score"]),
-            faithfulness=as_float(record["faithfulness"]),
-            cosine_sim=as_float(record["cosine_sim"]),
-            squad_f1=as_float(record["squad_f1"]),
-            squad_em=as_float(record["squad_em"]),
-            char_precision=as_float(record["char_precision"]),
-            char_recall=as_float(record["char_recall"]),
-            hit_at_8=as_float(record["hit_at_8"]),
-            retrieval_ms=as_float(record["retrieval_ms"]),
-            generation_ms=as_float(record["generation_ms"]),
-            input_tokens=as_int(record["input_tokens"]),
-            output_tokens=as_int(record["output_tokens"]),
+            crag_score=_as_float(record["crag_score"]),
+            faithfulness=_as_float(record["faithfulness"]),
+            cosine_sim=_as_float(record["cosine_sim"]),
+            squad_f1=_as_float(record["squad_f1"]),
+            squad_em=_as_float(record["squad_em"]),
+            char_precision=_as_float(record["char_precision"]),
+            char_recall=_as_float(record["char_recall"]),
+            hit_at_8=_as_float(record["hit_at_8"]),
+            retrieval_ms=_as_float(record["retrieval_ms"]),
+            generation_ms=_as_float(record["generation_ms"]),
+            input_tokens=_as_int(record["input_tokens"]),
+            output_tokens=_as_int(record["output_tokens"]),
             # cost_usd is Decimal(10,6) in Postgres; float() here keeps the payload
             # JSON-serialisable, and six decimal places is far inside float precision.
-            cost_usd=as_float(record["cost_usd"]),
+            cost_usd=_as_float(record["cost_usd"]),
         )
         for record in records
     ]

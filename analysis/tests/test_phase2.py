@@ -18,6 +18,8 @@ from tosrag_analysis.phase2 import (
     build_abstention,
     build_all,
     build_arm_summary,
+    build_cost_effectiveness,
+    build_outcome_buckets,
     build_paired_analysis,
     build_paired_comparisons,
     build_retrieval_identity,
@@ -403,6 +405,146 @@ class TestLatencySummary:
         # A locally served model costs $0 in API terms, and that is the finding, not
         # a missing measurement — so it is 0.0, never None.
         assert summary[BASELINE_MODEL]["cost"]["total_usd"] == pytest.approx(0.0)
+
+
+class TestCostEffectiveness:
+    """Cost against quality — the only framing in which the paid arm's bill is a finding."""
+
+    def _mixed_rows(self):
+        """Treatment correct everywhere; baseline wrong on the first two questions.
+
+        Mirrors the real frame's shape (the treatment arm fixes a handful of the
+        baseline's errors) at a size the assertions can state exactly.
+        """
+        return make_rows(
+            questions=SMALL_QUESTIONS,
+            score_for=lambda model, qid: (
+                1.0
+                if model == TREATMENT_MODEL
+                else (-1.0 if qid in SMALL_QUESTIONS[:2] else 1.0)
+            ),
+        )
+
+    def test_reports_cost_per_correct_answer_not_just_a_total(self):
+        payload = build_cost_effectiveness(self._mixed_rows())
+        treatment = payload["arms"][TREATMENT_MODEL]
+        assert treatment["n_correct"] == 10
+        assert treatment["total_usd"] == pytest.approx(0.2)
+        assert treatment["usd_per_correct_answer"] == pytest.approx(0.02)
+
+        baseline = payload["arms"][BASELINE_MODEL]
+        assert baseline["n_correct"] == 8
+        # $0 per correct answer is the finding for a locally served model, not a gap.
+        assert baseline["usd_per_correct_answer"] == pytest.approx(0.0)
+
+    def test_marginal_price_of_the_accuracy_the_treatment_buys(self):
+        payload = build_cost_effectiveness(self._mixed_rows())
+        marginal = payload["marginal"]
+        assert marginal["additional_correct_answers"] == 2
+        assert marginal["additional_usd"] == pytest.approx(0.2)
+        assert marginal["usd_per_additional_correct_answer"] == pytest.approx(0.1)
+
+    def test_no_additional_correct_answers_leaves_the_marginal_price_undefined(self):
+        # Both arms correct everywhere: the treatment bought nothing, and a per-correction
+        # price would be a division by zero dressed up as a measurement.
+        payload = build_cost_effectiveness(make_rows(
+            questions=SMALL_QUESTIONS,
+            score_for=lambda model, qid: 1.0,
+        ))
+        assert payload["marginal"]["additional_correct_answers"] == 0
+        assert payload["marginal"]["usd_per_additional_correct_answer"] is None
+
+    def test_splits_the_bill_into_input_and_output(self):
+        # 10 runs x 100 input tokens at $5/Mtok = $0.005; 10 x 20 output at $25 = $0.005.
+        payload = build_cost_effectiveness(self._mixed_rows())
+        treatment = payload["arms"][TREATMENT_MODEL]
+        assert treatment["input_usd"] == pytest.approx(0.005)
+        assert treatment["output_usd"] == pytest.approx(0.005)
+        assert treatment["input_share"] == pytest.approx(0.5)
+
+    def test_a_free_arm_has_no_meaningful_input_share(self):
+        payload = build_cost_effectiveness(self._mixed_rows())
+        baseline = payload["arms"][BASELINE_MODEL]
+        assert baseline["input_usd"] == pytest.approx(0.0)
+        assert baseline["input_share"] is None
+
+    def test_recomputed_total_is_checked_against_the_stored_one(self):
+        # The fixture's stored $0.02/run does not match the price table applied to its
+        # token counts ($0.001/run), and the payload must say so rather than quietly
+        # publishing a split that does not add up to the stored bill.
+        payload = build_cost_effectiveness(self._mixed_rows())
+        treatment = payload["arms"][TREATMENT_MODEL]
+        assert treatment["recomputed_total_usd"] == pytest.approx(0.01)
+        assert treatment["recomputed_matches_stored"] is False
+
+    def test_recomputed_matches_when_stored_cost_follows_the_price_table(self):
+        payload = build_cost_effectiveness(make_rows(
+            questions=SMALL_QUESTIONS,
+            # 100 input at $5/Mtok + 20 output at $25/Mtok = $0.001 per run.
+            cost_for=lambda model, qid: 0.001 if model == TREATMENT_MODEL else 0.0,
+        ))
+        assert payload["arms"][TREATMENT_MODEL]["recomputed_matches_stored"] is True
+        assert payload["arms"][BASELINE_MODEL]["recomputed_matches_stored"] is True
+
+
+class TestOutcomeBuckets:
+    def test_every_question_lands_in_exactly_one_bucket(self):
+        rows = make_rows(
+            questions=SMALL_QUESTIONS,
+            score_for=lambda model, qid: (
+                1.0
+                if model == TREATMENT_MODEL
+                else (-1.0 if qid in SMALL_QUESTIONS[:2] else 1.0)
+            ),
+        )
+        buckets = build_outcome_buckets(rows)
+        assert [b["bucket"] for b in buckets] == [
+            "both_correct", "treatment_only", "baseline_only", "neither",
+        ]
+        assert sum(b["n_questions"] for b in buckets) == len(SMALL_QUESTIONS)
+        assert not set().intersection(*[set(b["question_ids"]) for b in buckets])
+
+        by_name = {b["bucket"]: b for b in buckets}
+        assert by_name["treatment_only"]["question_ids"] == SMALL_QUESTIONS[:2]
+        assert by_name["both_correct"]["n_questions"] == 8
+        assert by_name["neither"]["n_questions"] == 0
+
+    def test_abstention_is_not_correct_but_is_kept_apart_from_a_hallucination(self):
+        # 0 is a real CRAG score (Missing), so it is "not correct" here — but the bucket
+        # it lands in must be the same one -1 lands in only when both arms fail.
+        rows = make_rows(
+            questions=SMALL_QUESTIONS,
+            score_for=lambda model, qid: (
+                0.0 if model == TREATMENT_MODEL and qid == SMALL_QUESTIONS[0] else 1.0
+            ),
+        )
+        by_name = {b["bucket"]: b for b in build_outcome_buckets(rows)}
+        assert by_name["baseline_only"]["question_ids"] == [SMALL_QUESTIONS[0]]
+
+    def test_reports_answer_length_per_arm_within_each_bucket(self):
+        rows = make_rows(questions=SMALL_QUESTIONS)
+        by_name = {b["bucket"]: b for b in build_outcome_buckets(rows)}
+        treatment_only = by_name["treatment_only"]
+        assert treatment_only["n_questions"] == len(SMALL_QUESTIONS)
+        assert treatment_only[TREATMENT_MODEL]["mean_output_tokens"] == pytest.approx(20.0)
+        assert treatment_only[TREATMENT_MODEL]["mean_usd_per_run"] == pytest.approx(0.02)
+
+    def test_an_empty_bucket_reports_none_rather_than_zero_tokens(self):
+        # A bucket with no questions has no mean answer length; 0.0 would read as
+        # "the model answered with nothing".
+        by_name = {b["bucket"]: b for b in build_outcome_buckets(make_rows(questions=SMALL_QUESTIONS))}
+        assert by_name["neither"]["n_questions"] == 0
+        assert by_name["neither"][TREATMENT_MODEL]["mean_output_tokens"] is None
+
+    def test_a_null_headline_score_raises_rather_than_vanishing_from_the_buckets(self):
+        rows = make_rows(
+            questions=SMALL_QUESTIONS,
+            score_for=lambda model, qid: (
+                None if model == BASELINE_MODEL and qid == SMALL_QUESTIONS[0] else 1.0
+            ),
+        )
+        with pytest.raises(ShapeError, match="crag_score is NULL"):
+            build_outcome_buckets(rows)
 
 
 class TestRetrievalIdentity:

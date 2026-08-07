@@ -1,4 +1,5 @@
 import { MODEL_IDS, type Judge } from "@tos-rag/core";
+import { callAnthropic } from "./anthropic";
 
 /**
  * The LLM-judge adapter (PRD §8.7, §10.3): Claude Sonnet via the Anthropic
@@ -37,47 +38,26 @@ export function createJudge(
           "The CRAG judge isn't configured — set ANTHROPIC_API_KEY to run evaluation.",
         );
       }
-      const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": env.ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL_IDS.judge,
-          max_tokens: maxTokens,
-          // Sonnet 5 removed `temperature` (400 if sent); determinism is
-          // best-effort regardless. Thinking disabled: this is a short binary
-          // classification, and adaptive thinking (the Sonnet 5 default) would
-          // consume the small max_tokens budget before the verdict.
-          thinking: { type: "disabled" },
-          messages: [{ role: "user", content: prompt }],
-        }),
+      const reply = await callAnthropic({
+        apiKey: env.ANTHROPIC_API_KEY,
+        model: MODEL_IDS.judge,
+        maxTokens,
+        prompt,
+        errorLabel: "Judge API failed",
+        fetchImpl,
       });
-      if (!res.ok) {
-        throw new Error(`Judge API failed: ${res.status} ${await res.text()}`);
-      }
-      const json = (await res.json()) as {
-        content: Array<{ type: string; text?: string }>;
-        stop_reason?: string;
-      };
       // A reply cut off at the cap is a JSON prefix with no closing brace. The
       // parsers' line fallback would read those broken lines as real content and
       // write a plausible-looking score with no error anywhere. Caught here,
       // where `stop_reason` lives, so it becomes a failed row instead. The CRAG
       // path gets the same protection for free.
-      if (json.stop_reason === "max_tokens") {
+      if (reply.stopReason === "max_tokens") {
         throw new Error(
           `Judge reply was truncated at the ${maxTokens}-token cap (stop_reason: max_tokens) — ` +
             "the JSON is incomplete and unsafe to parse.",
         );
       }
-      return json.content
-        .filter((block) => block.type === "text")
-        .map((block) => block.text ?? "")
-        .join("")
-        .trim();
+      return reply.text;
     },
   };
 }

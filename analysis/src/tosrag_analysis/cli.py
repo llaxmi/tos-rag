@@ -11,6 +11,7 @@ import json
 import sys
 
 from . import db, phase1, phase2
+from .grid import ShapeError
 
 
 def _summarise(payloads: dict[str, dict]) -> str:
@@ -145,33 +146,27 @@ def main(argv: list[str] | None = None) -> int:
     # incomplete phase not blocking the analysis of a phase that is complete only holds
     # under an explicit `--only`: on the default all-keys run, a Phase-1 ShapeError below
     # still returns 1 before Phase 2 is ever computed.
-    if selected & set(phase1.ANALYSIS_KEYS):
+    # One table, one loop: the two phases load and build identically, and keeping
+    # them as copy-pasted blocks is what let their error handling drift apart.
+    phases = (
+        ("Phase-1", phase1.ANALYSIS_KEYS, db.load_phase1_rows, phase1.build_all),
+        ("Phase-2", phase2.ANALYSIS_KEYS, db.load_phase2_rows, phase2.build_all),
+    )
+    for label, keys, load_rows, build_all in phases:
+        if not (selected & set(keys)):
+            continue
         try:
-            phase1_rows = db.load_phase1_rows(dsn)
-        except Exception as exc:
-            print(f"error: could not read Phase-1 rows: {exc}", file=sys.stderr)
-            return 2
-        print(f"loaded {len(phase1_rows)} Phase-1 rows")
-        try:
-            built = phase1.build_all(phase1_rows)
-        except phase1.ShapeError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 1
-        payloads.update({k: v for k, v in built.items() if k in selected})
-
-    if selected & set(phase2.ANALYSIS_KEYS):
-        try:
-            phase2_rows = db.load_phase2_rows(dsn)
-        except phase1.ShapeError as exc:
+            rows = load_rows(dsn)
+        except ShapeError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         except Exception as exc:
-            print(f"error: could not read Phase-2 rows: {exc}", file=sys.stderr)
+            print(f"error: could not read {label} rows: {exc}", file=sys.stderr)
             return 2
-        print(f"loaded {len(phase2_rows)} Phase-2 rows")
+        print(f"loaded {len(rows)} {label} rows")
         try:
-            built = phase2.build_all(phase2_rows)
-        except phase1.ShapeError as exc:
+            built = build_all(rows)
+        except ShapeError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         payloads.update({k: v for k, v in built.items() if k in selected})
@@ -180,7 +175,8 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payloads, indent=2, sort_keys=True))
     else:
         print()
-        summaries = [text for text in (_summarise(payloads),) if text]
+        phase1_summary = _summarise(payloads)
+        summaries = [phase1_summary] if phase1_summary else []
         if "phase2_paired" in payloads:
             summaries.append(_summarise_phase2(payloads["phase2_paired"]))
         print("\n\n".join(summaries))

@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   buildRagPrompt,
   CHUNK_SIZES,
+  DOC_IDS,
   GENERATOR_MODELS,
   isAbstention,
   STRATEGIES,
@@ -52,8 +53,9 @@ export interface AppDeps {
 }
 
 /** The frozen corpus (PRD §5). Shared by /api/ask and /api/document so a
- *  document added to one is never silently missing from the other. */
-const DocIdSchema = z.enum(["github-tos", "netflix-tou"]);
+ *  document added to one is never silently missing from the other, and derived
+ *  from core's `DOC_IDS` so neither can drift from the corpus itself. */
+const DocIdSchema = z.enum(DOC_IDS);
 
 const AskSchema = z.object({
   question: z.string().min(1).max(2000),

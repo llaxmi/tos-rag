@@ -16,12 +16,12 @@
 import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { parseQuestionsJsonl } from "@tos-rag/core";
+import { DOC_IDS, parseQuestionsJsonl } from "@tos-rag/core";
 import { upsertDocument, upsertQuestions } from "@tos-rag/db";
 import { loadCanonical, REPO_ROOT } from "../adapters/canonical";
 import { getFlag } from "./args";
+import { runScript } from "./entrypoint";
 
-const DOC_IDS = ["github-tos", "netflix-tou"] as const;
 const QUESTIONS_DIR = join(REPO_ROOT, "corpus", "questions");
 
 interface Args {
@@ -73,7 +73,4 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? `\n✗ ${err.message}\n` : err);
-  process.exitCode = 1;
-});
+runScript(main);
