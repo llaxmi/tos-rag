@@ -96,6 +96,10 @@ export interface PairedMetricRow {
   /** Why no effect size could reach significance at this discordance count.
    *  Null when the analysis did not record a floor. */
   floorNote: string | null;
+  /** How the p-value was obtained — e.g. "permutation (monte carlo, seeded)"
+   *  or "exact". Read verbatim from `wilcoxon.method`; never assume "exact"
+   *  when this is absent. */
+  method: string | null;
 }
 
 export interface PairedTable {
@@ -309,6 +313,7 @@ function parsePairedRows(paired: unknown, arms: unknown): PairedMetricRow[] {
       ties: num(w["ties"]) ?? 0,
       nPairs: num(raw["n_pairs_used"]) ?? num(w["n_pairs"]) ?? 0,
       floorNote: str(raw["floor_note"]),
+      method: str(w["method"]),
     });
   }
   return rows;
@@ -387,6 +392,7 @@ function parseHeldOut(payload: Record<string, unknown>): PairedTable | null {
         ties: num(w["ties"]) ?? 0,
         nPairs: num(w["n_pairs"]) ?? llama.n,
         floorNote: null,
+        method: null,
       },
     ],
   };

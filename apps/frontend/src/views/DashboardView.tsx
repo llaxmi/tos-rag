@@ -24,7 +24,6 @@ import {
   GENERATION_COLOR,
   Heatmap,
   HeatmapScale,
-  Hero,
   LatencyBoxes,
   LatencyStacks,
   RETRIEVAL_COLOR,
@@ -92,6 +91,19 @@ function MeanCI({ value, strong }: { value: MetricValue | null; strong?: boolean
 /** " (holm-corrected, α = 0.05)" — but only for the parts the payload carried.
  *  A missing correction or threshold drops its fragment rather than being
  *  filled in from the experiment's constants, which the payload did not state. */
+/** Describes how the §4 p-values were computed, read from the stored
+ *  `wilcoxon.method` on the table's first row rather than assumed to be
+ *  "exact" — the payload uses seeded Monte Carlo permutation above 20 pairs
+ *  (PRD §11), so claiming "exact" unconditionally was false for the n = 30
+ *  Phase-2 comparisons. Falls back to a method-agnostic phrase when the
+ *  payload didn't carry one. */
+function wilcoxonMethodPhrase(table: PairedTable | null): string {
+  const method = table?.rows.find((r) => r.method)?.method ?? null;
+  return method
+    ? `Wilcoxon signed-rank p-values via ${method} with Holm correction`
+    : "Wilcoxon signed-rank p-values with Holm correction";
+}
+
 function testQualifier({ correction, alpha }: BestVsRest): string {
   const parts = [
     correction ? `${correction}-corrected` : null,
@@ -134,7 +146,6 @@ export function DashboardView() {
       .then((rows) => setData(parseAnalysis(rows ?? [])))
       .catch(() => setLoadFailed(true));
   }, []);
-
 
   // Scrollspy: track which section's heading has scrolled past the
   // "reading line" near the top of the viewport. Walking the sections in
@@ -275,8 +286,8 @@ export function DashboardView() {
           <Section
             id="sec-1"
             eyebrow="§1 · Phase 1 — Chunking"
-            title="All 15 configurations"
-            lead="Mean per metric with bootstrap 95% CIs. Generator fixed to Llama 3.1 8B questions. The winning row is marked; the bar behind each truthfulness value encodes its magnitude"
+            title={rows ? `All ${rows.length} configurations` : "All configurations"}
+            lead="Mean per metric with bootstrap 95% CIs. Generator fixed to Llama 3.1 8B for all configurations. The winning row is marked."
           >
             {rows ? (
             <Card className="overflow-hidden p-0">
@@ -441,9 +452,15 @@ export function DashboardView() {
             eyebrow="§4 · Phase 2 — Generators"
             title="Claude Opus 4.8 vs Llama 3.1 8B"
             lead={
+              // The pre-declaration clause below ("fixed before any p-value
+              // was seen") is not sourced from the payload — `paired.family`
+              // lists the tested metrics but records nothing about when that
+              // list was fixed. It states a real property of the experiment
+              // design, kept as prose rather than removed, but it is not a
+              // read from stored data the way the rest of this string is.
               data?.phase2
-                ? `Paired comparison over ${data.phase2.nQuestions} questions under the winning config. Exact Wilcoxon signed-rank p-values with Holm correction.`
-                : "Paired comparison under the winning config. Exact Wilcoxon signed-rank p-values with Holm correction."
+                ? `Paired comparison over ${data.phase2.nQuestions} questions under the winning config. ${wilcoxonMethodPhrase(data.phase2)}, applied across a metric family fixed before any p-value was seen.`
+                : `Paired comparison under the winning config. ${wilcoxonMethodPhrase(null)}, applied across a metric family fixed before any p-value was seen.`
             }
           >
             {data?.phase2 ? (
@@ -453,6 +470,11 @@ export function DashboardView() {
                   <Swatch className="bg-seq-5">significant at α = 0.05</Swatch>
                   <Swatch className="bg-seq-2">not significant</Swatch>
                 </div>
+                {data.phase2.rows.find((r) => r.floorNote)?.floorNote && (
+                  <p className="bg-muted text-ink-soft mt-4 rounded-lg p-4 text-[13px] leading-relaxed">
+                    {data.phase2.rows.find((r) => r.floorNote)!.floorNote}
+                  </p>
+                )}
               </>
             ) : (
               <NoData what="Phase-2 paired comparison" failed={loadFailed} />
@@ -520,7 +542,7 @@ export function DashboardView() {
             id="sec-5"
             eyebrow="§5 · Operational"
             title="Latency by stage"
-            lead="Retrieval and generation timed separately per run; medians shown. GPU routing makes the tails noisy, so medians are the headline."
+            lead="Retrieval and generation timed separately per run; medians shown as the summary, full spread in the box plots below."
           >
             {data?.latency ? (
               <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_240px] md:items-start">

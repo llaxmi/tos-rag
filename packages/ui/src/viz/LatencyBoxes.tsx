@@ -40,6 +40,14 @@ function StageBoxes({
   stage: string;
   samples: LatencySample[];
 }) {
+  if (samples.length === 0) {
+    return (
+      <p className="text-muted-foreground text-[12.5px]">
+        No {stage} samples for this stage.
+      </p>
+    );
+  }
+
   const width = 560;
   const rowH = 40;
   const labelW = 128;
