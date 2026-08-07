@@ -16,7 +16,6 @@
  * sustained 529s while Phase 2 was collected, so stopping part-way is normal.
  */
 import "dotenv/config";
-import { pathToFileURL } from "node:url";
 import {
   cosineSimilarity,
   costUsd,
@@ -27,12 +26,12 @@ import {
 import {
   getBackfillRows,
   getDocumentSha256,
-  prisma,
   updateEvalMetrics,
   type BackfillRow,
 } from "@tos-rag/db";
 import { createEmbedder, createJudge, loadCanonical } from "../adapters";
 import { ALL_METRICS, parseBackfillArgs, type MetricName } from "./args";
+import { isEntrypoint, runScript } from "./entrypoint";
 
 /**
  * Rough cost of one faithfulness row — two Sonnet calls over a ~3k-token
@@ -278,11 +277,6 @@ function logFailure(metric: MetricName, row: BackfillRow, e: unknown): void {
   );
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main()
-    .catch((err: unknown) => {
-      console.error(err);
-      process.exitCode = 1;
-    })
-    .finally(() => void prisma.$disconnect());
+if (isEntrypoint(import.meta.url)) {
+  runScript(main, { disconnect: true, verbose: true });
 }

@@ -12,7 +12,7 @@
  */
 import "dotenv/config";
 import { insertChunks, resolveConfigId, upsertDocument } from "@tos-rag/db";
-import { CHUNK_SIZES, STRATEGIES, type Strategy } from "@tos-rag/core";
+import { CHUNK_SIZES, parseConfigRef, STRATEGIES, type Strategy } from "@tos-rag/core";
 import { loadCanonical } from "../adapters/canonical";
 import { createLocalEmbedder } from "../adapters/embedder.local";
 import { getFlag } from "./args";
@@ -44,15 +44,8 @@ function parseArgs(argv: string[]): Args {
     };
   }
 
-  const strategy = (get("--strategy") ?? "sentence") as Strategy;
-  const chunkSize = Number(get("--size") ?? 256);
-  if (!STRATEGIES.includes(strategy)) {
-    throw new Error(`Unknown strategy '${strategy}'. One of: ${STRATEGIES.join(", ")}`);
-  }
-  if (!(CHUNK_SIZES as readonly number[]).includes(chunkSize)) {
-    throw new Error(`Chunk size must be one of ${CHUNK_SIZES.join(", ")}, got ${chunkSize}`);
-  }
-  return { docId, dtype, dryRun, configs: [{ strategy, chunkSize }] };
+  const config = parseConfigRef(`${get("--strategy") ?? "sentence"}:${get("--size") ?? 256}`);
+  return { docId, dtype, dryRun, configs: [config] };
 }
 
 function median(xs: number[]): number {
@@ -92,13 +85,28 @@ async function main(): Promise<void> {
   const embedder = await createLocalEmbedder({ dtype: args.dtype });
   console.log(`embedder ${embedder.name} ready in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
 
+  // The semantic chunker embeds every sentence to find its breakpoints, and the
+  // sentence list does not depend on chunk size — so a `--all-configs` sweep
+  // asks for the identical embeddings three times over. Cached by text for the
+  // life of the run (the same trick `backfill-metrics.ts` uses); embeddings are
+  // deterministic, so this changes cost, not output.
+  const embedCache = new Map<string, number[]>();
+  const embedDocuments = async (texts: string[]): Promise<number[][]> => {
+    const missing = texts.filter((t) => !embedCache.has(t));
+    if (missing.length > 0) {
+      const fresh = await embedder.embedDocuments([...new Set(missing)]);
+      [...new Set(missing)].forEach((t, i) => embedCache.set(t, fresh[i]!));
+    }
+    return texts.map((t) => embedCache.get(t)!);
+  };
+
   for (const { strategy, chunkSize } of args.configs) {
     const started = Date.now();
     const configId = args.dryRun ? null : await resolveConfigId(strategy, chunkSize);
 
     const rows = await planIngest(canonical.text, canonical.docId, strategy, chunkSize, {
       countTokens: embedder.countTokens,
-      embedDocuments: embedder.embedDocuments,
+      embedDocuments,
     });
 
     if (configId !== null) {

@@ -2,6 +2,7 @@ import type { RetrievedChunk, Strategy } from "@tos-rag/core";
 import { GENERATION_MAX_TOKENS, MODEL_IDS, PHASE1_WINNER, RETRIEVAL_K } from "@tos-rag/core";
 import type { CanonicalDocument } from "@tos-rag/shared";
 import { matchChunks, prisma, resolveConfigId } from "@tos-rag/db";
+import { callAnthropic } from "../adapters/anthropic";
 import { loadCanonical } from "../adapters/canonical";
 import type { Embedder } from "../adapters/embedder";
 import type { AppDeps, GenerationResult } from "../app";
@@ -74,39 +75,17 @@ export function createLiveDeps(env: LiveEnv, embedder: Embedder): AppDeps {
       );
     }
     const t0 = Date.now();
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL_IDS.opus,
-        max_tokens: GENERATION_MAX_TOKENS,
-        // Opus 4.8 removed `temperature` (400 if sent). Thinking disabled so the
-        // paid arm answers directly from context — a fair comparison to the
-        // open (Llama) generator, which does no extended reasoning.
-        thinking: { type: "disabled" },
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const reply = await callAnthropic({
+      apiKey: env.ANTHROPIC_API_KEY,
+      model: MODEL_IDS.opus,
+      maxTokens: GENERATION_MAX_TOKENS,
+      prompt,
+      errorLabel: "Anthropic API failed",
     });
-    if (!res.ok) {
-      throw new Error(`Anthropic API failed: ${res.status} ${await res.text()}`);
-    }
-    const json = (await res.json()) as {
-      content: Array<{ type: string; text?: string }>;
-      usage: { input_tokens: number; output_tokens: number };
-    };
-    const answer = json.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text ?? "")
-      .join("")
-      .trim();
     return {
-      answer,
-      inputTokens: json.usage.input_tokens,
-      outputTokens: json.usage.output_tokens,
+      answer: reply.text,
+      inputTokens: reply.inputTokens,
+      outputTokens: reply.outputTokens,
       latencyMs: Date.now() - t0,
     };
   }

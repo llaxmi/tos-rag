@@ -16,12 +16,14 @@ import "dotenv/config";
 import {
   CHUNK_SIZES,
   MODEL_IDS,
+  parseConfigRef,
   planRuns,
   STRATEGIES,
   type Strategy,
 } from "@tos-rag/core";
 import { getCompletedRunKeys, getQuestions, resolveConfigId } from "@tos-rag/db";
 import { getFlag, parseLimitFlag } from "./args";
+import { runScript } from "./entrypoint";
 import {
   createOrchestratorDeps,
   executeRuns,
@@ -40,11 +42,9 @@ interface Args {
 
 function parseArgs(argv: string[]): Args {
   const configArg = getFlag(argv, "--config");
-  let only: Args["only"];
-  if (configArg) {
-    const [strategy, size] = configArg.split(":");
-    only = { strategy: strategy as Strategy, chunkSize: Number(size) };
-  }
+  // Validated against the frozen grid rather than cast: a typo'd strategy would
+  // otherwise surface as a missing-config-row error much further downstream.
+  const only = configArg ? parseConfigRef(configArg) : undefined;
   return { only, limit: parseLimitFlag(argv) };
 }
 
@@ -100,7 +100,4 @@ async function main(): Promise<void> {
   if (failed > 0) process.exitCode = 1;
 }
 
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? `\n✗ ${err.message}\n` : err);
-  process.exitCode = 1;
-});
+runScript(main);

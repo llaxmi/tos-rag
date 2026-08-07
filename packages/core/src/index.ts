@@ -70,9 +70,11 @@ export {
   GENERATION_SEED,
   GoldSpanSchema,
   MODEL_IDS,
+  parseConfigRef,
   PHASE1_WINNER,
   QTYPES,
   QuestionRecordSchema,
   RETRIEVAL_K,
+  type ChunkSize,
   type QuestionRecord,
 } from "./schemas";

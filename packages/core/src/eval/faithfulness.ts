@@ -1,6 +1,7 @@
 import type { RetrievedRef } from "../orchestrator/runOne";
 import { formatContextBlocks, isAbstention } from "../prompts";
 import type { Judge } from "./evaluate";
+import { extractJsonObject } from "./json";
 
 /**
  * Faithfulness (PRD §10.2): how much of an answer the retrieved context actually
@@ -74,17 +75,11 @@ export function buildDecomposePrompt(question: string, answer: string): string {
 
 /** JSON first, then a numbered-line fallback (PRD §10.2 robustness). */
 export function parseStatements(text: string): string[] {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      const obj = JSON.parse(jsonMatch[0]) as { statements?: unknown };
-      if (Array.isArray(obj.statements)) {
-        return obj.statements.map((s) => String(s).trim()).filter((s) => s.length > 0);
-      }
-    } catch {
-      // fall through to the line fallback
-    }
+  const obj = extractJsonObject(text);
+  if (obj && Array.isArray(obj["statements"])) {
+    return obj["statements"].map((s) => String(s).trim()).filter((s) => s.length > 0);
   }
+  // otherwise fall through to the line fallback
   return text
     .split("\n")
     .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, "").trim())
@@ -119,25 +114,20 @@ export function buildNliPrompt(
  * Throws rather than defaulting — a default would bias the score one way.
  */
 export function parseNliVerdicts(text: string): boolean[] {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      const obj = JSON.parse(jsonMatch[0]) as { verdicts?: unknown };
-      if (Array.isArray(obj.verdicts) && obj.verdicts.length > 0) {
-        const normalized = obj.verdicts.map((v) => String(v).trim().toLowerCase());
-        // Every token must be exactly "supported" or "unsupported". Something
-        // like "yes" is not a verdict, and `=== "supported"` would score it
-        // false — a clean-looking 0.000 for an answer that may be fully
-        // grounded. Falling through instead of throwing still lets the word scan
-        // rescue a reply that has bad JSON but readable verdicts elsewhere.
-        if (normalized.every((v) => v === "supported" || v === "unsupported")) {
-          return normalized.map((v) => v === "supported");
-        }
-      }
-    } catch {
-      // fall through to the word scan
+  const obj = extractJsonObject(text);
+  const verdicts = obj?.["verdicts"];
+  if (Array.isArray(verdicts) && verdicts.length > 0) {
+    const normalized = verdicts.map((v) => String(v).trim().toLowerCase());
+    // Every token must be exactly "supported" or "unsupported". Something
+    // like "yes" is not a verdict, and `=== "supported"` would score it
+    // false — a clean-looking 0.000 for an answer that may be fully
+    // grounded. Falling through instead of throwing still lets the word scan
+    // rescue a reply that has bad JSON but readable verdicts elsewhere.
+    if (normalized.every((v) => v === "supported" || v === "unsupported")) {
+      return normalized.map((v) => v === "supported");
     }
   }
+  // otherwise fall through to the word scan
   const words = text.toLowerCase().match(/\b(?:un)?supported\b/g);
   if (!words) {
     throw new Error(

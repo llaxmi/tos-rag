@@ -8,6 +8,8 @@
  * `prompts/templates.py`: explanation before score, few-shot, JSON output.
  */
 
+import { extractJsonObject } from "./json";
+
 /** A binary CRAG outcome. Missing (0) is decided by rule, never by the judge. */
 export interface CragVerdict {
   score: -1 | 1;
@@ -57,23 +59,16 @@ export function buildCragPrompt(
  * Truthfulness in one direction.
  */
 export function parseCragVerdict(text: string): CragVerdict {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      const obj = JSON.parse(jsonMatch[0]) as {
-        score?: unknown;
-        explanation?: unknown;
+  const obj = extractJsonObject(text);
+  if (obj) {
+    const score = String(obj["score"] ?? "").trim().toLowerCase();
+    if (score === "accurate" || score === "incorrect") {
+      return {
+        score: score === "accurate" ? 1 : -1,
+        explanation: String(obj["explanation"] ?? "").trim(),
       };
-      const score = String(obj.score ?? "").trim().toLowerCase();
-      if (score === "accurate" || score === "incorrect") {
-        return {
-          score: score === "accurate" ? 1 : -1,
-          explanation: String(obj.explanation ?? "").trim(),
-        };
-      }
-    } catch {
-      // fall through to the regex fallback
     }
+    // otherwise fall through to the regex fallback
   }
 
   const lowered = text.toLowerCase();
