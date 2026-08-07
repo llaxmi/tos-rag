@@ -14,7 +14,7 @@ const findCell = (rows: ConfigRow[], strategy: string, size: number) =>
   rows.find((r) => r.strategy === strategy && r.chunkSize === size);
 
 const extent = (rows: ConfigRow[]): [number, number] => {
-  const values = rows.map((r) => r.truthfulness);
+  const values = rows.map((r) => r.truthfulness.mean);
   return [Math.min(...values), Math.max(...values)];
 };
 
@@ -77,7 +77,7 @@ export function Heatmap({
           {SIZES.map((size, j) => {
             const r = findCell(rows, strategy, size);
             if (!r) return null;
-            const color = heatColor(r.truthfulness, min, max);
+            const color = heatColor(r.truthfulness.mean, min, max);
             const x = labelW + j * cellW + gap / 2;
             const y = headH + i * cellH + gap / 2;
             const w = cellW - gap;
@@ -100,7 +100,10 @@ export function Heatmap({
                 >
                   <title>
                     {strategy} × {size} tokens — truthfulness{" "}
-                    {r.truthfulness.toFixed(2)}
+                    {r.truthfulness.mean.toFixed(2)}
+                    {r.truthfulness.ci
+                      ? ` (95% CI ${r.truthfulness.ci[0].toFixed(2)}–${r.truthfulness.ci[1].toFixed(2)})`
+                      : ` (no CI — ${r.truthfulness.ciOmittedReason ?? "not computed"})`}
                   </title>
                 </rect>
                 {isHighlighted && (
@@ -123,7 +126,7 @@ export function Heatmap({
                   fontSize="13"
                   fill={inkFor(color)}
                 >
-                  {r.truthfulness.toFixed(2)}
+                  {r.truthfulness.mean.toFixed(2)}
                 </text>
               </g>
             );
@@ -208,7 +211,7 @@ export function ContactSheet({
                 width={cellW}
                 height={cellH}
                 rx="2"
-                fill={heatColor(r.truthfulness, min, max)}
+                fill={heatColor(r.truthfulness.mean, min, max)}
                 className="heat-cell"
                 style={{ animationDelay: `${(i * SIZES.length + j) * 20}ms` }}
               />

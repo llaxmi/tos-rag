@@ -1,4 +1,4 @@
-import { boxStats, formatMs, linearScale, MODEL_LABELS } from "@tos-rag/shared";
+import { formatMs, linearScale, MODEL_LABELS } from "@tos-rag/shared";
 import type { LatencySample } from "@tos-rag/shared";
 
 /** Light blue for the (small, fast) retrieval stage. */
@@ -16,14 +16,14 @@ interface ModelTotals {
 
 export function LatencyStacks({ samples }: { samples: LatencySample[] }) {
   const models = ["llama", "opus"] as const;
+  // Total rather than `!`-asserted: an arm can be missing from the payload.
+  const stageMedian = (model: string, stage: string): number =>
+    samples.find((s) => s.model === model && s.stage === stage)?.stats.median ?? 0;
+
   const rows: ModelTotals[] = models.map((model) => ({
     model,
-    retrievalMs: boxStats(
-      samples.find((s) => s.model === model && s.stage === "retrieval")!.values,
-    ).median,
-    generationMs: boxStats(
-      samples.find((s) => s.model === model && s.stage === "generation")!.values,
-    ).median,
+    retrievalMs: stageMedian(model, "retrieval"),
+    generationMs: stageMedian(model, "generation"),
   }));
 
   const width = 500;

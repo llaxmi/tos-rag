@@ -6,7 +6,14 @@
  * payload does not appear on the dashboard (PRD §12).
  */
 
+import { CHUNK_SIZES, PHASE1_WINNER, STRATEGIES } from "@tos-rag/core";
+
 import type { AnalysisRow } from "./types";
+
+// The frozen experimental controls live in @tos-rag/core; re-exported here so
+// the dashboard's grid axes stay in lockstep with the pipeline.
+export { STRATEGIES, PHASE1_WINNER };
+export const SIZES = CHUNK_SIZES;
 
 /** A stored point estimate. `ci` is null when the analysis declined to compute
  *  one (zero variance, too few pairs); `ciOmittedReason` says why. */

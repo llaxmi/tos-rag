@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getResults } from "../lib/api";
 import {
   formatMeanCI,
   formatUSD,
+  parseAnalysis,
   PHASE1_WINNER,
-  SAMPLE_COST,
-  SAMPLE_LATENCY,
-  SAMPLE_PHASE1,
-  SAMPLE_PHASE2,
-  SIZES,
-  STRATEGIES,
-  type ConfigRow,
+  type ConfigMetrics,
+  type DashboardData,
+  type FactorLevel,
+  type MetricValue,
+  type PairedTable,
 } from "@tos-rag/shared";
 import {
   Alert,
@@ -39,20 +38,16 @@ import {
   TooltipContent,
   TooltipTrigger,
   cn,
+  type FactorBar,
 } from "@tos-rag/ui";
 
-type Numeric = Exclude<
-  keyof ConfigRow,
-  "strategy" | "chunkSize" | "truthfulnessCI"
->;
-
-const METRIC_COLUMNS: Array<{ key: Numeric; label: string }> = [
+const METRIC_COLUMNS: Array<{ key: keyof ConfigMetrics; label: string }> = [
   { key: "truthfulness", label: "Truthfulness" },
   { key: "faithfulness", label: "Faithfulness" },
-  { key: "charRecall", label: "Char R@8" },
-  { key: "charPrecision", label: "Char P@8" },
-  { key: "hitRate", label: "Hit@8" },
-  { key: "f1", label: "SQuAD F1" },
+  { key: "charRecall", label: "Char R@5" },
+  { key: "charPrecision", label: "Char P@5" },
+  { key: "hitRate", label: "Hit@5" },
+  { key: "squadF1", label: "SQuAD F1" },
 ];
 
 /** The dashboard is a sequence — Phase 1, then Phase 2, then operational. */
@@ -77,35 +72,45 @@ const HEAD_CELL_LG =
   "text-muted-foreground text-right font-mono text-[12px] uppercase tracking-[0.06em]";
 
 /** Stacked mean + CI range, used in the §4 comparison table cells. */
-function MeanCI({
-  mean,
-  ci,
-  strong,
-}: {
-  mean: number;
-  ci: [number, number];
-  strong?: boolean;
-}) {
+function MeanCI({ value, strong }: { value: MetricValue | null; strong?: boolean }) {
+  if (!value) return <span className="text-muted-foreground">—</span>;
   return (
     <div className="leading-tight">
       <div className={cn(strong && "text-foreground font-medium")}>
-        {mean.toFixed(2)}
+        {value.mean.toFixed(2)}
       </div>
       <div className="text-muted-foreground text-[12px]">
-        {ci[0].toFixed(2)}–{ci[1].toFixed(2)}
+        {value.ci
+          ? `${value.ci[0].toFixed(2)}–${value.ci[1].toFixed(2)}`
+          : (value.ciOmittedReason ?? "no CI")}
       </div>
     </div>
   );
 }
 
+/** Shown in place of a figure whose payload has not been computed. The
+ *  dashboard states the absence rather than filling it with a plausible
+ *  number — the same rule the report follows for unmeasured values. */
+function NoData({ what }: { what: string }) {
+  return (
+    <Card className="border-dashed p-8">
+      <p className="text-muted-foreground text-[13.5px]">
+        No {what} in the database yet. Run <code className="font-mono">pnpm analyze</code>{" "}
+        to compute it.
+      </p>
+    </Card>
+  );
+}
+
 export function DashboardView() {
-  const [live, setLive] = useState<boolean | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [activeSection, setActiveSection] = useState<string>(SECTIONS[0]!.id);
 
   useEffect(() => {
     getResults()
-      .then((r) => setLive(r !== null))
-      .catch(() => setLive(false));
+      .then((rows) => setData(parseAnalysis(rows ?? [])))
+      .catch(() => setLoadFailed(true));
   }, []);
 
 
@@ -144,37 +149,27 @@ export function DashboardView() {
     };
   }, []);
 
-  const rows = SAMPLE_PHASE1;
+  const rows = data?.phase1 ?? null;
 
+  const toBars = (levels: FactorLevel[] | null, suffix = ""): FactorBar[] | null =>
+    levels?.map((l) => ({
+      label: `${l.label}${suffix}`,
+      value: l.estimate.mean,
+      // FactorBars requires an interval; where the analysis omitted one, the
+      // whisker collapses to the point estimate rather than being invented.
+      ci: l.estimate.ci ?? [l.estimate.mean, l.estimate.mean],
+    })) ?? null;
 
-  const byStrategy = STRATEGIES.map((s) => {
-    const vals = rows.filter((r) => r.strategy === s).map((r) => r.truthfulness);
-    const mean = vals.reduce((a, v) => a + v, 0) / vals.length;
-    return {
-      label: s,
-      value: mean,
-      ci: [mean - 0.07, mean + 0.07] as [number, number],
-    };
-  });
-  const bySize = SIZES.map((size) => {
-    const vals = rows
-      .filter((r) => r.chunkSize === size)
-      .map((r) => r.truthfulness);
-    const mean = vals.reduce((a, v) => a + v, 0) / vals.length;
-    return {
-      label: `${size} tok`,
-      value: mean,
-      ci: [mean - 0.06, mean + 0.06] as [number, number],
-    };
-  });
-  const maxDelta = Math.max(...SAMPLE_PHASE2.map((m) => Math.abs(m.delta)));
+  const byStrategy = toBars(data?.byStrategy ?? null);
+  const bySize = toBars(data?.bySize ?? null, " tok");
+
   return (
     <>
       <header className="mb-8">
         <p className={EYEBROW}>Results</p>
         <h1>What the experiment measured.</h1>
         <div className="mt-7 flex flex-wrap items-center gap-8">
-          <ContactSheet rows={rows} winner={PHASE1_WINNER} />
+          {rows && <ContactSheet rows={rows} winner={PHASE1_WINNER} />}
           <div className="min-w-65 flex-1">
             <p className="text-ink-soft max-w-[46ch] text-[15px]">
               15 chunking configurations, two generators, 360 runs — every
@@ -190,14 +185,13 @@ export function DashboardView() {
         </div>
       </header>
 
-      {live === false && (
+      {loadFailed && (
         <Alert variant="destructive" className="mb-8 border-dashed">
           <AlertTitle className="font-mono text-[11px] uppercase tracking-[0.14em]">
-            Illustrative data
+            Results unavailable
           </AlertTitle>
           <AlertDescription>
-            Not experimental findings — the experiment hasn't run yet. These
-            numbers only demonstrate the dashboard.
+            Couldn't reach the results API. Check that the backend is running.
           </AlertDescription>
         </Alert>
       )}
@@ -258,6 +252,7 @@ export function DashboardView() {
             title="All 15 configurations"
             lead="Mean per metric with bootstrap 95% CIs. Generator fixed to Llama 3.1 8B questions. The winning row is marked; the bar behind each truthfulness value encodes its magnitude"
           >
+            {rows ? (
             <Card className="overflow-hidden p-0">
               <Table>
                 <TableHeader>
@@ -296,22 +291,41 @@ export function DashboardView() {
                             <span className="text-ring font-bold"> ← winner</span>
                           )}
                         </TableCell>
-                        {METRIC_COLUMNS.map((c) => (
-                          <TableCell
-                            key={c.key}
-                            className={cn(NUM_CELL, isWinner && "font-bold")}
-                          >
-                            {c.key === "truthfulness"
-                              ? formatMeanCI(r.truthfulness, r.truthfulnessCI)
-                              : r[c.key].toFixed(2)}
-                          </TableCell>
-                        ))}
+                        {METRIC_COLUMNS.map((c) => {
+                          const m = r[c.key];
+                          return (
+                            <TableCell
+                              key={c.key}
+                              className={cn(NUM_CELL, isWinner && "font-bold")}
+                            >
+                              {m === null ? (
+                                <span className="text-muted-foreground">—</span>
+                              ) : c.key === "truthfulness" && m.ci ? (
+                                formatMeanCI(m.mean, m.ci)
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>{m.mean.toFixed(2)}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {m.ci
+                                      ? `95% CI ${m.ci[0].toFixed(2)}–${m.ci[1].toFixed(2)} (n = ${m.n})`
+                                      : `No CI — ${m.ciOmittedReason ?? "not computed"} (n = ${m.n})`}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
             </Card>
+            ) : (
+              <NoData what="Phase-1 configuration ranking" />
+            )}
           </Section>
 
           <CutMark />
@@ -322,29 +336,31 @@ export function DashboardView() {
             title="Truthfulness, strategy × size"
             lead="The headline CRAG-style score (accuracy − hallucination rate) across the full grid. Darker is better."
           >
-            <Card className="p-7">
-              <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_240px]">
-                <Heatmap
-                  rows={rows}
-                  highlight={{ strategy: "recursive", chunkSize: 256 }}
-                />
-                <div>
-                  <p className={EYEBROW}>Scale</p>
-                  <HeatmapScale rows={rows} />
-                  <div className="bg-border my-5 h-px" />
-                  <p className={EYEBROW}>Read it this way</p>
-                  <p className="text-ink-soft text-[13.5px] leading-relaxed">
-                    256-token chunks win in every strategy — the middle
-                    column is the darkest band on the grid. Sentence chunking
-                    peaks highest overall (0.68), while{" "}
-                    <span className="text-foreground font-mono text-[12.5px]">
-                      recursive × 256
-                    </span>{" "}
-                    is the configuration carried into Phase 2.
-                  </p>
+            {rows ? (
+              <Card className="p-7">
+                <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_240px]">
+                  <Heatmap rows={rows} highlight={PHASE1_WINNER} />
+                  <div>
+                    <p className={EYEBROW}>Scale</p>
+                    <HeatmapScale rows={rows} />
+                    <div className="bg-border my-5 h-px" />
+                    <p className={EYEBROW}>Read it this way</p>
+                    <p className="text-ink-soft text-[13.5px] leading-relaxed">
+                      Darker cells score higher. The ringed cell,{" "}
+                      <span className="text-foreground font-mono text-[12.5px]">
+                        {PHASE1_WINNER.strategy} × {PHASE1_WINNER.chunkSize}
+                      </span>
+                      , is the configuration carried into Phase 2 — ranked first
+                      on truthfulness, though the overlapping intervals in §1
+                      mean the grid does not separate the configurations
+                      statistically.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            ) : (
+              <NoData what="Phase-1 configuration ranking" />
+            )}
           </Section>
 
           <CutMark />
@@ -356,19 +372,30 @@ export function DashboardView() {
             lead="Per-question scores averaged by strategy (across its three sizes) and by size (across the five strategies), with bootstrap 95% CI whiskers."
           >
             <div className="flex flex-col gap-5">
-              <Card className="gap-0 p-5">
-                <p className="text-[17px] font-semibold">By chunking strategy</p>
-                <p className="text-muted-foreground mb-4 mt-0.5 text-[12.5px]">mean truthfulness across sizes</p>
-                <FactorBars items={byStrategy} ariaLabel="Mean truthfulness by chunking strategy" domainMax={0.7} />
-              </Card>
-              <Card className="gap-0 p-5">
-                <p className="text-[17px] font-semibold">By chunk size</p>
-                <p className="text-muted-foreground mb-4 mt-0.5 text-[12.5px]">mean truthfulness across strategies</p>
-                <FactorBars items={bySize} ariaLabel="Mean truthfulness by chunk size" domainMax={0.7} />
-                <p className="bg-muted text-ink-soft mt-4 rounded-lg p-4 text-[13px] leading-relaxed">
-                  The size effect is non-monotonic: 256 tokens beats both smaller and larger chunks, so retrieval precision and context sufficiency trade off around that point.
-                </p>
-              </Card>
+              {byStrategy ? (
+                <Card className="gap-0 p-5">
+                  <p className="text-[17px] font-semibold">By chunking strategy</p>
+                  <p className="text-muted-foreground mb-4 mt-0.5 text-[12.5px]">mean truthfulness across sizes</p>
+                  <FactorBars items={byStrategy} ariaLabel="Mean truthfulness by chunking strategy" />
+                </Card>
+              ) : (
+                <NoData what="per-strategy factor analysis" />
+              )}
+              {bySize ? (
+                <Card className="gap-0 p-5">
+                  <p className="text-[17px] font-semibold">By chunk size</p>
+                  <p className="text-muted-foreground mb-4 mt-0.5 text-[12.5px]">mean truthfulness across strategies</p>
+                  <FactorBars items={bySize} ariaLabel="Mean truthfulness by chunk size" />
+                  <p className="bg-muted text-ink-soft mt-4 rounded-lg p-4 text-[13px] leading-relaxed">
+                    Each bar averages the per-question scores of the configurations
+                    sharing that level; the whiskers are the stored bootstrap 95%
+                    CIs. Where the whisker collapses to a point, the analysis
+                    recorded no interval — none is invented here.
+                  </p>
+                </Card>
+              ) : (
+                <NoData what="per-size factor analysis" />
+              )}
             </div>
           </Section>
 
@@ -379,83 +406,17 @@ export function DashboardView() {
             title="Claude Opus 4.8 vs Llama 3.1 8B"
             lead="Paired comparison over all 30 questions under the winning config. Exact Wilcoxon signed-rank p-values with Holm correction."
           >
-            <Card className="overflow-hidden p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={cn(HEAD_CELL_LG, "text-left")}>
-                      Metric
-                    </TableHead>
-                    <TableHead className={HEAD_CELL_LG}>Llama 3.1 8B</TableHead>
-                    <TableHead className={HEAD_CELL_LG}>Claude Opus 4.8</TableHead>
-                    <TableHead className={cn(HEAD_CELL_LG, "text-left")}>
-                      Δ Opus − Llama
-                    </TableHead>
-                    <TableHead className={HEAD_CELL_LG}>p (Holm)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {SAMPLE_PHASE2.map((m) => {
-                    const significant = m.pHolm < 0.05;
-                    const deltaFrac = Math.abs(m.delta) / maxDelta;
-                    return (
-                      <TableRow key={m.metric}>
-                        <TableCell
-                          className={cn(
-                            NUM_CELL_LG,
-                            "text-foreground text-left",
-                          )}
-                        >
-                          {m.metric}
-                        </TableCell>
-                        <TableCell className={NUM_CELL_LG}>
-                          <MeanCI mean={m.llamaMean} ci={m.llamaCI} />
-                        </TableCell>
-                        <TableCell className={NUM_CELL_LG}>
-                          <MeanCI
-                            mean={m.opusMean}
-                            ci={m.opusCI}
-                            strong={m.opusMean > m.llamaMean}
-                          />
-                        </TableCell>
-                        <TableCell className={cn(NUM_CELL_LG, "text-left")}>
-                          <div className="flex items-center gap-3">
-                            <div className="bg-muted h-3 w-40 overflow-hidden rounded-full">
-                              <div
-                                className={cn(
-                                  "h-full rounded-full",
-                                  significant ? "bg-seq-5" : "bg-seq-2",
-                                )}
-                                style={{ width: `${deltaFrac * 100}%` }}
-                              />
-                            </div>
-                            <span className="text-foreground">
-                              {m.delta >= 0 ? "+" : ""}
-                              {m.delta.toFixed(2)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className={NUM_CELL_LG}>
-                          {significant ? (
-                            <span className="bg-seq-1 text-seq-6 rounded px-2 py-0.5 font-semibold">
-                              {m.pHolm.toFixed(3)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {m.pHolm.toFixed(3)}
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Card>
-            <div className="text-ink-soft mt-3 flex flex-wrap gap-4 text-[12.5px]">
-              <Swatch className="bg-seq-5">significant at α = 0.05</Swatch>
-              <Swatch className="bg-seq-2">not significant</Swatch>
-            </div>
+            {data?.phase2 ? (
+              <>
+                <PairedTableCard table={data.phase2} />
+                <div className="text-ink-soft mt-3 flex flex-wrap gap-4 text-[12.5px]">
+                  <Swatch className="bg-seq-5">significant at α = 0.05</Swatch>
+                  <Swatch className="bg-seq-2">not significant</Swatch>
+                </div>
+              </>
+            ) : (
+              <NoData what="Phase-2 paired comparison" />
+            )}
           </Section>
 
           <CutMark />
@@ -466,26 +427,36 @@ export function DashboardView() {
             title="Latency by stage"
             lead="Retrieval and generation timed separately per run; medians shown. GPU routing makes the tails noisy, so medians are the headline."
           >
-            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_240px] md:items-start">
-              <Card className="p-5">
-                <LatencyStacks samples={SAMPLE_LATENCY} />
-              </Card>
-              <div>
-                <div className="text-ink-soft flex flex-col gap-1.5 text-[12.5px]">
-                  <Swatch color={RETRIEVAL_COLOR}>retrieval</Swatch>
-                  <Swatch color={GENERATION_COLOR}>generation</Swatch>
+            {data?.latency ? (
+              <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_240px] md:items-start">
+                <div className="flex flex-col gap-5">
+                  <Card className="p-5">
+                    <LatencyStacks samples={data.latency} />
+                  </Card>
+                  <Card className="p-5">
+                    <LatencyBoxes samples={data.latency} />
+                  </Card>
                 </div>
-                <hr className="border-border my-4" />
-                <p className="text-muted-foreground mb-2.5 text-[10.5px] font-bold uppercase tracking-[0.12em]">
-                  Read it this way
-                </p>
-                <p className="text-ink-soft text-[13px] leading-relaxed">
-                  Retrieval is effectively free and identical across generators — the
-                  entire latency difference is generation. Opus buys +0.19
-                  truthfulness for 2.4s of extra wall-clock per question.
-                </p>
+                <div>
+                  <div className="text-ink-soft flex flex-col gap-1.5 text-[12.5px]">
+                    <Swatch color={RETRIEVAL_COLOR}>retrieval</Swatch>
+                    <Swatch color={GENERATION_COLOR}>generation</Swatch>
+                  </div>
+                  <hr className="border-border my-4" />
+                  <p className="text-muted-foreground mb-2.5 text-[10.5px] font-bold uppercase tracking-[0.12em]">
+                    Read it this way
+                  </p>
+                  <p className="text-ink-soft text-[13px] leading-relaxed">
+                    Both arms share one retrieval path — same config, same k, same
+                    embedder — so the stacked bars differ only in their generation
+                    segment. The box plots below show the spread behind those
+                    medians.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <NoData what="Phase-2 latency" />
+            )}
           </Section>
 
           <CutMark />
@@ -496,56 +467,164 @@ export function DashboardView() {
             title="Token cost"
             lead="Total tokens across all Phase 2 runs, converted at published prices."
           >
-            <div className="flex flex-col gap-5">
-              {SAMPLE_COST.map((r) => {
-                const isClaude = r.model.startsWith("Claude");
-                const maxCost = Math.max(...SAMPLE_COST.map((c) => c.costUSD));
-                const frac = Math.max((r.costUSD / maxCost) * 100, 1.5);
-                const [name, note] = r.model.includes("(")
-                  ? [r.model.split(" (")[0], `(${r.model.split(" (")[1]}`]
-                  : [r.model, null];
-                return (
-                  <Card key={r.model} className="gap-0 p-6">
-                    <p className="text-[15px]">
-                      <span className="text-foreground font-medium">{name}</span>
-                      {note && (
-                        <span className="text-muted-foreground ml-1.5">{note}</span>
-                      )}
-                    </p>
-                    <p className="text-foreground mt-3 font-mono text-[38px] font-bold leading-none">
-                      {formatUSD(r.costUSD)}
-                    </p>
-                    <div className="bg-border mt-5 h-2 w-full overflow-hidden rounded-full">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${frac}%`,
-                          background: isClaude ? "var(--compare)" : "var(--seq-6)",
-                        }}
-                      />
-                    </div>
-                    <div className="text-muted-foreground mt-4 flex gap-6 font-mono text-[12.5px]">
-                      <span>
-                        {r.inputTokens.toLocaleString()}{" "}
-                        <span className="text-ink-soft">in</span>
-                      </span>
-                      <span>
-                        {r.outputTokens.toLocaleString()}{" "}
-                        <span className="text-ink-soft">out</span>
-                      </span>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-            <p className="bg-muted text-ink-soft mt-5 rounded-lg p-4 text-[13px] leading-relaxed">
-              Identical input volume; output length is nearly identical too. The 71×
-              cost gap is entirely price per token, not verbosity.
-            </p>
+            {data?.cost ? (
+              <>
+                <div className="flex flex-col gap-5">
+                  {(() => {
+                    const costs = data.cost;
+                    const maxCost = Math.max(...costs.map((c) => c.costUSD));
+                    return costs.map((r) => {
+                      const isClaude = r.model.startsWith("claude");
+                      const [name, note] = r.label.includes("(")
+                        ? [r.label.split(" (")[0], `(${r.label.split(" (")[1]}`]
+                        : [r.label, null];
+                      return (
+                        <Card key={r.model} className="gap-0 p-6">
+                          <p className="text-[15px]">
+                            <span className="text-foreground font-medium">{name}</span>
+                            {note && (
+                              <span className="text-muted-foreground ml-1.5">{note}</span>
+                            )}
+                          </p>
+                          <p className="text-foreground mt-3 font-mono text-[38px] font-bold leading-none">
+                            {r.costUSD === 0 ? "$0.00" : formatUSD(r.costUSD)}
+                          </p>
+                          {/* A zero-cost arm gets a sentence, not a zero-width bar:
+                              "no marginal API cost" is not the same as "cheap". */}
+                          {r.costUSD === 0 ? (
+                            <p className="text-ink-soft mt-4 text-[13px] leading-relaxed">
+                              {data.costNote ??
+                                "Served locally — no marginal API cost is billed per run."}
+                            </p>
+                          ) : (
+                            <div className="bg-border mt-5 h-2 w-full overflow-hidden rounded-full">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${maxCost > 0 ? Math.max((r.costUSD / maxCost) * 100, 1.5) : 0}%`,
+                                  background: isClaude ? "var(--compare)" : "var(--seq-6)",
+                                }}
+                              />
+                            </div>
+                          )}
+                          <div className="text-muted-foreground mt-4 flex gap-6 font-mono text-[12.5px]">
+                            <span>
+                              {r.inputTokens.toLocaleString()}{" "}
+                              <span className="text-ink-soft">in</span>
+                            </span>
+                            <span>
+                              {r.outputTokens.toLocaleString()}{" "}
+                              <span className="text-ink-soft">out</span>
+                            </span>
+                          </div>
+                        </Card>
+                      );
+                    });
+                  })()}
+                </div>
+                {data.tokenComparabilityNote && (
+                  <p className="bg-muted text-ink-soft mt-5 rounded-lg p-4 text-[13px] leading-relaxed">
+                    {data.tokenComparabilityNote}
+                  </p>
+                )}
+              </>
+            ) : (
+              <NoData what="Phase-2 token cost" />
+            )}
           </Section>
         </div>
       </div>
     </>
+  );
+}
+
+/** §4's paired comparison table. Every number is read from the stored payload:
+ *  the bar widths are relative magnitudes of the stored deltas, and
+ *  significance is whatever the Holm correction recorded. */
+function PairedTableCard({ table }: { table: PairedTable }) {
+  const maxDelta = Math.max(...table.rows.map((m) => Math.abs(m.delta.mean)), 1e-9);
+  return (
+    <Card className="overflow-hidden p-0">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className={cn(HEAD_CELL_LG, "text-left")}>Metric</TableHead>
+            <TableHead className={HEAD_CELL_LG}>Llama 3.1 8B</TableHead>
+            <TableHead className={HEAD_CELL_LG}>Claude Opus 4.8</TableHead>
+            <TableHead className={cn(HEAD_CELL_LG, "text-left")}>
+              Δ Opus − Llama
+            </TableHead>
+            <TableHead className={HEAD_CELL_LG}>W–L–T</TableHead>
+            <TableHead className={HEAD_CELL_LG}>p (Holm)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {table.rows.map((m) => {
+            const deltaFrac = Math.abs(m.delta.mean) / maxDelta;
+            return (
+              <TableRow key={m.metric}>
+                <TableCell className={cn(NUM_CELL_LG, "text-foreground text-left")}>
+                  {m.label}
+                </TableCell>
+                <TableCell className={NUM_CELL_LG}>
+                  <MeanCI value={m.llama} />
+                </TableCell>
+                <TableCell className={NUM_CELL_LG}>
+                  <MeanCI
+                    value={m.opus}
+                    strong={
+                      m.llama !== null &&
+                      m.opus !== null &&
+                      m.opus.mean > m.llama.mean
+                    }
+                  />
+                </TableCell>
+                <TableCell className={cn(NUM_CELL_LG, "text-left")}>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-muted h-3 w-40 overflow-hidden rounded-full">
+                      <div
+                        className={cn(
+                          "h-full rounded-full",
+                          m.significant ? "bg-seq-5" : "bg-seq-2",
+                        )}
+                        style={{ width: `${deltaFrac * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-foreground">
+                      {m.delta.mean >= 0 ? "+" : ""}
+                      {m.delta.mean.toFixed(2)}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className={NUM_CELL_LG}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="font-mono">
+                        {m.wins}–{m.losses}–{m.ties}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {`Opus wins – Llama wins – ties, over ${m.nPairs} paired questions`}
+                    </TooltipContent>
+                  </Tooltip>
+                </TableCell>
+                <TableCell className={NUM_CELL_LG}>
+                  {m.significant ? (
+                    <span className="bg-seq-1 text-seq-6 rounded px-2 py-0.5 font-semibold">
+                      {m.pHolm.toFixed(3)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {m.pHolm.toFixed(3)}
+                    </span>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 
