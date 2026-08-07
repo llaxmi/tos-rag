@@ -15,6 +15,7 @@ from psycopg.rows import dict_row
 
 from .judge import JudgedRow
 from .phase1 import Row
+from .phase2 import Phase2Row, ShapeError
 
 # Phase 1 is Llama-only (PRD 7); Phase 2 adds Opus rows under the same config.
 # Filtering explicitly keeps this analysis correct once those rows exist.
@@ -41,6 +42,39 @@ join questions q on q.id = r.question_id
 where r.phase = 1
   and r.model = %(model)s
 order by c.strategy, c.chunk_size, r.question_id
+"""
+
+
+# Phase 2 is the two-arm comparison: one config, two models, 30 questions. No
+# `config_id` filter is needed now that the superseded recursive:256 rows are deleted
+# (2026-08-04), but `load_phase2_rows` asserts a single config is present so a future
+# second config cannot silently pool two experiments into one paired test.
+PHASE2_QUERY = """
+select
+  r.config_id,
+  r.model,
+  r.question_id,
+  q.qtype,
+  q.phase1,
+  r.answer,
+  e.crag_score,
+  e.faithfulness,
+  e.cosine_sim,
+  e.squad_f1,
+  e.squad_em,
+  e.char_precision,
+  e.char_recall,
+  e.hit_at_8,
+  r.retrieval_ms,
+  r.generation_ms,
+  r.input_tokens,
+  r.output_tokens,
+  e.cost_usd
+from runs r
+join evals e on e.run_id = r.id
+join questions q on q.id = r.question_id
+where r.phase = 2
+order by r.model, r.question_id
 """
 
 
@@ -127,6 +161,58 @@ def load_phase1_rows(dsn: str, model: str = PHASE1_MODEL) -> list[Row]:
             squad_em=as_float(record["squad_em"]),
             retrieval_ms=as_float(record["retrieval_ms"]),
             generation_ms=as_float(record["generation_ms"]),
+        )
+        for record in records
+    ]
+
+
+def load_phase2_rows(dsn: str) -> list[Phase2Row]:
+    """One Phase2Row per (model, question) for Phase 2."""
+    with psycopg.connect(dsn) as connection, connection.cursor(row_factory=dict_row) as cursor:
+        cursor.execute(PHASE2_QUERY)
+        records = cursor.fetchall()
+
+    config_ids = {int(record["config_id"]) for record in records}
+    if len(config_ids) > 1:
+        # Pooling two configs into one paired test would compare generators *and*
+        # pipelines at once, and the payload would not say which produced the gap.
+        raise ShapeError(
+            f"Phase-2 rows span {len(config_ids)} configs {sorted(config_ids)} \u2014 "
+            "the paired comparison assumes a single frozen configuration"
+        )
+
+    def as_float(value) -> float | None:
+        return None if value is None else float(value)
+
+    def as_int(value) -> int | None:
+        return None if value is None else int(value)
+
+    # Fields are looked up by column name, so reordering a SELECT column can never
+    # silently shift every later value into the wrong slot.
+    return [
+        Phase2Row(
+            model=record["model"],
+            question_id=record["question_id"],
+            qtype=record["qtype"],
+            # `questions.phase1` is true for the 20 questions Phase 1 used, so the
+            # held-out set is its complement.
+            held_out=not record["phase1"],
+            answer=record["answer"] or "",
+            crag_score=as_float(record["crag_score"]),
+            faithfulness=as_float(record["faithfulness"]),
+            cosine_sim=as_float(record["cosine_sim"]),
+            squad_f1=as_float(record["squad_f1"]),
+            squad_em=as_float(record["squad_em"]),
+            char_precision=as_float(record["char_precision"]),
+            char_recall=as_float(record["char_recall"]),
+            hit_at_8=as_float(record["hit_at_8"]),
+            retrieval_ms=as_float(record["retrieval_ms"]),
+            generation_ms=as_float(record["generation_ms"]),
+            input_tokens=as_int(record["input_tokens"]),
+            output_tokens=as_int(record["output_tokens"]),
+            # cost_usd is Decimal(10,6) in Postgres; float() here keeps the payload
+            # JSON-serialisable, and six decimal places is far inside float precision.
+            cost_usd=as_float(record["cost_usd"]),
         )
         for record in records
     ]

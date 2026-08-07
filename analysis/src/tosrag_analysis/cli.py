@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 
-from . import db, phase1
+from . import db, phase1, phase2
 
 
 def _summarise(payloads: dict[str, dict]) -> str:
@@ -49,10 +49,72 @@ def _summarise(payloads: dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
+def _summarise_phase2(payload: dict) -> str:
+    treatment = payload["models"]["treatment"]
+    baseline = payload["models"]["baseline"]
+    # Wide enough to print either model id in full: "claude-opus-4-8" is 15 characters,
+    # longer than the fixed 16-wide column this used to share with a [:14] truncation,
+    # which silently printed the non-existent id "claude-opus-4-".
+    model_width = max(len(treatment), len(baseline)) + 2
+    lines: list[str] = [
+        f"Phase 2: {payload['comparison']}  (n = {payload['n_questions']} questions)",
+        "",
+        f"{'metric':<14}{treatment:>{model_width}}{baseline:>{model_width}}"
+        f"{'p_raw':>9}{'p_holm':>9}{'pairs':>7}",
+    ]
+
+    def number(value, spec: str) -> str:
+        return "n/a" if value is None else format(value, spec)
+
+    for entry in payload["paired"]["metrics"]:
+        lines.append(
+            f"{entry['metric']:<14}"
+            f"{number(entry['means'][treatment], f'>{model_width}.4f')}"
+            f"{number(entry['means'][baseline], f'>{model_width}.4f')}"
+            f"{number(entry['p_raw'], '>9.4f')}"
+            f"{number(entry['p_holm'], '>9.4f')}"
+            f"{entry['n_pairs_used']:>7}"
+        )
+
+    lines.append(
+        "means are over complete pairs only (see `pairs`); arm-level means over all "
+        "non-NULL runs are in the stored payload under `arms`"
+    )
+
+    wins = payload["win_counts"]
+    lines += [
+        "",
+        payload["paired"]["interpretation"],
+        f"per-question wins on {wins['metric']}: "
+        f"{treatment} {wins['wins'][treatment]}, "
+        f"{baseline} {wins['wins'][baseline]}, ties {wins['ties']}",
+        f"retrieval identical across arms: {payload['retrieval']['identical']}",
+    ]
+
+    for model, entry in sorted(payload["abstention"]["models"].items()):
+        lines.append(
+            f"abstention {model:<16} recall {number(entry['recall'], '.3f')}  "
+            f"precision {number(entry['precision'], '.3f')}  "
+            f"(abstained {entry['n_abstained']} of {entry['n_unanswerable']} unanswerable)"
+        )
+
+    for subset in payload["subsets"]:
+        subset_wins = subset["win_counts"]
+        lines.append(
+            f"subset {subset['label']:<16} n = {subset['n_questions']:<3} "
+            f"{treatment} {number(subset['means'][treatment]['mean'], '.3f')} vs "
+            f"{baseline} {number(subset['means'][baseline]['mean'], '.3f')}  "
+            f"(wins {subset_wins['wins'][treatment]}/{subset_wins['wins'][baseline]}, "
+            f"ties {subset_wins['ties']}; descriptive only)"
+        )
+
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="analyze",
-        description="Phase-1 inferential statistics for tos-rag (PRD 11).",
+        description="Phase-1 and Phase-2 inferential statistics for tos-rag (PRD 11).",
     )
     parser.add_argument(
         "--dry-run",
@@ -62,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--only",
         action="append",
-        choices=list(phase1.ANALYSIS_KEYS),
+        choices=list(phase1.ANALYSIS_KEYS) + list(phase2.ANALYSIS_KEYS),
         help="write only this analysis key (repeatable); all keys by default",
     )
     parser.add_argument("--database-url", default=None, help="override DATABASE_URL")
@@ -75,28 +137,53 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    try:
-        rows = db.load_phase1_rows(dsn)
-    except Exception as exc:
-        print(f"error: could not read Phase-1 rows: {exc}", file=sys.stderr)
-        return 2
+    selected = set(args.only) if args.only else set(phase1.ANALYSIS_KEYS) | set(phase2.ANALYSIS_KEYS)
+    payloads: dict[str, dict] = {}
 
-    print(f"loaded {len(rows)} Phase-1 rows")
+    # Load only the rows the selection needs. Phase 1's build runs 14 permutation tests
+    # and is the slow half, so `--only phase2_paired` should not pay for it. An
+    # incomplete phase not blocking the analysis of a phase that is complete only holds
+    # under an explicit `--only`: on the default all-keys run, a Phase-1 ShapeError below
+    # still returns 1 before Phase 2 is ever computed.
+    if selected & set(phase1.ANALYSIS_KEYS):
+        try:
+            phase1_rows = db.load_phase1_rows(dsn)
+        except Exception as exc:
+            print(f"error: could not read Phase-1 rows: {exc}", file=sys.stderr)
+            return 2
+        print(f"loaded {len(phase1_rows)} Phase-1 rows")
+        try:
+            built = phase1.build_all(phase1_rows)
+        except phase1.ShapeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        payloads.update({k: v for k, v in built.items() if k in selected})
 
-    try:
-        payloads = phase1.build_all(rows)
-    except phase1.ShapeError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-
-    if args.only:
-        payloads = {key: payloads[key] for key in args.only}
+    if selected & set(phase2.ANALYSIS_KEYS):
+        try:
+            phase2_rows = db.load_phase2_rows(dsn)
+        except phase1.ShapeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(f"error: could not read Phase-2 rows: {exc}", file=sys.stderr)
+            return 2
+        print(f"loaded {len(phase2_rows)} Phase-2 rows")
+        try:
+            built = phase2.build_all(phase2_rows)
+        except phase1.ShapeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        payloads.update({k: v for k, v in built.items() if k in selected})
 
     if args.json:
         print(json.dumps(payloads, indent=2, sort_keys=True))
     else:
         print()
-        print(_summarise(payloads))
+        summaries = [text for text in (_summarise(payloads),) if text]
+        if "phase2_paired" in payloads:
+            summaries.append(_summarise_phase2(payloads["phase2_paired"]))
+        print("\n\n".join(summaries))
 
     if args.dry_run:
         print()
