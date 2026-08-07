@@ -1,5 +1,5 @@
 import type React from "react";
-import { DOC_LABELS, type Evidence } from "@tos-rag/shared";
+import { docLabel, type Evidence } from "@tos-rag/shared";
 import { CutMark } from "./CutMark";
 import { Badge } from "./primitives/badge";
 import { Card } from "./primitives/card";
@@ -51,7 +51,7 @@ export function EvidenceCard({ index, evidence, cited, flashed, onSelect }: Prop
         <Badge variant="outline" className="text-foreground font-normal">
           {index}
         </Badge>
-        <span>{DOC_LABELS[evidence.docId] ?? evidence.docId}</span>
+        <span>{docLabel(evidence.docId)}</span>
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="text-ink-soft ml-auto inline-flex cursor-default items-center gap-2">

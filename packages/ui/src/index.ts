@@ -14,11 +14,6 @@ export {
   CardContent,
   CardFooter,
 } from "./primitives/card";
-export {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "./primitives/collapsible";
 export { Input } from "./primitives/input";
 export { Separator } from "./primitives/separator";
 export { Skeleton } from "./primitives/skeleton";
@@ -54,5 +49,4 @@ export { FactorBars, type FactorBar } from "./viz/FactorBars";
 export { Heatmap, HeatmapScale, ContactSheet } from "./viz/Heatmap";
 export { LatencyBoxes } from "./viz/LatencyBoxes";
 export { LatencyStacks, RETRIEVAL_COLOR, GENERATION_COLOR } from "./viz/LatencyStacks";
-export { Hero } from "./Hero";
 export { TracePanel } from "./TracePanel";

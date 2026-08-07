@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   formatMs,
   MODEL_LABELS,
@@ -32,7 +33,11 @@ export function ChatTurn({
   active,
   onCiteClick,
 }: Props) {
-  const parsed = response ? parseCitations(response.answer) : null;
+  // Memoized on the answer text: every keystroke in the question box re-renders
+  // the whole thread, and re-parsing each answer's citations on each one is work
+  // that can only ever produce the same result.
+  const answer = response?.answer;
+  const parsed = useMemo(() => (answer ? parseCitations(answer) : null), [answer]);
 
   return (
     <article

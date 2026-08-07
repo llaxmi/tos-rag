@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Strategy } from "./types";
+import { STRATEGIES, type Strategy } from "./types";
 
 /** Gold clause span in canonical-document character offsets (PRD §6). */
 export const GoldSpanSchema = z
@@ -33,6 +33,34 @@ export type QuestionRecord = z.infer<typeof QuestionRecordSchema>;
 
 /** Experiment constants (PRD §7). */
 export const CHUNK_SIZES = [128, 256, 512] as const;
+export type ChunkSize = (typeof CHUNK_SIZES)[number];
+
+/**
+ * Parses a `"strategy:size"` config reference, validated against the frozen
+ * grid. Lives here, beside the tuples that define what is valid, because the
+ * CLI entry points that accept one (`ingest --strategy/--size`, `run-phase1
+ * --config`) otherwise each re-derive the check — and a typo that slips past
+ * an unvalidated cast dies much later inside `resolveConfigId`, which reports
+ * it as an unseeded configs table: a wrong diagnosis for a misspelling.
+ *
+ * `splitConfig` in @tos-rag/shared deliberately stays separate and lenient: it
+ * reads ids back out of stored payloads, where an id from an older grid must
+ * render rather than throw.
+ */
+export function parseConfigRef(text: string): { strategy: Strategy; chunkSize: ChunkSize } {
+  const [strategyText, sizeText] = text.split(":");
+  const strategy = strategyText as Strategy;
+  if (!strategyText || !STRATEGIES.includes(strategy)) {
+    throw new Error(
+      `Unknown strategy '${strategyText ?? ""}'. One of: ${STRATEGIES.join(", ")}`,
+    );
+  }
+  const chunkSize = Number(sizeText);
+  if (!(CHUNK_SIZES as readonly number[]).includes(chunkSize)) {
+    throw new Error(`Chunk size must be one of ${CHUNK_SIZES.join(", ")}, got ${sizeText ?? ""}`);
+  }
+  return { strategy, chunkSize: chunkSize as ChunkSize };
+}
 export const RETRIEVAL_K = 5;
 export const GENERATION_SEED = 42;
 export const GENERATION_MAX_TOKENS = 1024;

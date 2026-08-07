@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
   buildQuestionRecords,
+  DOC_IDS,
   QuoteResolutionError,
   type AuthoringEntry,
   type QuestionRecord,
@@ -26,7 +27,6 @@ import { getFlag } from "./args";
 
 const QUESTIONS_DIR = join(REPO_ROOT, "corpus", "questions");
 const AUTHORING_DIR = join(QUESTIONS_DIR, "authoring");
-const DOC_IDS = ["github-tos", "netflix-tou"] as const;
 
 interface Args {
   docIds: string[];

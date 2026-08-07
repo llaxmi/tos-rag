@@ -33,6 +33,16 @@ export interface SemanticChunkerOptions extends ChunkerOptions {
 export const STRATEGIES = ["fixed", "recursive", "sentence", "semantic", "section"] as const;
 export type Strategy = (typeof STRATEGIES)[number];
 
+/**
+ * The frozen corpus (PRD §5), single source of truth for the same reason
+ * `STRATEGIES` is: the backend's zod schema, the two question scripts, the
+ * dashboard's labels, and the demo's document picker all derive from this tuple.
+ * Adding a third document to one of those and not the others makes it either
+ * retrievable but unselectable, or selectable and rejected with a 400.
+ */
+export const DOC_IDS = ["github-tos", "netflix-tou"] as const;
+export type DocId = (typeof DOC_IDS)[number];
+
 /** A character span within a canonical document. */
 export interface Span {
   charStart: number;

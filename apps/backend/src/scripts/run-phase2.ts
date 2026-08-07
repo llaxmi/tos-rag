@@ -30,6 +30,7 @@ import {
 } from "@tos-rag/core";
 import { getCompletedRunKeys, getQuestions, resolveConfigId } from "@tos-rag/db";
 import { parsePhase2Args } from "./args";
+import { runScript } from "./entrypoint";
 import {
   createOrchestratorDeps,
   executeRuns,
@@ -140,7 +141,4 @@ async function main(): Promise<void> {
   if (failed > 0 || incompleteArm) process.exitCode = 1;
 }
 
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? `\n✗ ${err.message}\n` : err);
-  process.exitCode = 1;
-});
+runScript(main);

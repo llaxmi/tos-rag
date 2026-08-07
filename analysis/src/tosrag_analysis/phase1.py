@@ -10,7 +10,14 @@ from typing import Callable, Iterable, Sequence
 
 import numpy as np
 
+from .grid import ShapeError, assert_complete_grid, group_by
+from .grid import mean_or_none as _mean_or_none
+from .grid import values as _values
 from .stats import Estimate, clean_values, estimate, holm, paired_wilcoxon, summarise_latency
+
+# Re-exported: ShapeError is raised from `grid`, but callers (cli.py, tests) have
+# always caught it off the phase module.
+__all__ = ["ShapeError"]
 
 EXPECTED_CONFIGS = 15  # 5 strategies x 3 chunk sizes
 EXPECTED_QUESTIONS = 20  # Round-1 questions (PRD 7)
@@ -60,67 +67,26 @@ class Row:
         return getattr(self, name)
 
 
-class ShapeError(RuntimeError):
-    """The loaded rows are not a complete Phase-1 grid."""
-
-
 def assert_phase1_shape(
     rows: Sequence[Row],
     expected_configs: int = EXPECTED_CONFIGS,
     expected_questions: int = EXPECTED_QUESTIONS,
 ) -> None:
-    """Fail loudly before computing anything.
-
-    A silently missing config or question still produces a plausible-looking ranking,
-    and a wrong ranking is far more damaging than a crash. Same reasoning as
-    `plan-ingest.ts` asserting full tiling rather than only the offset invariant.
-    """
-    if not rows:
-        raise ShapeError("no Phase-1 rows found — has run-phase1 been run against this database?")
-
-    configs = sorted({r.config for r in rows})
-    if len(configs) != expected_configs:
-        raise ShapeError(
-            f"expected {expected_configs} configs, found {len(configs)}: {configs}"
-        )
-
-    questions_by_config = {c: sorted(r.question_id for r in rows if r.config == c) for c in configs}
-    reference = questions_by_config[configs[0]]
-    if len(reference) != expected_questions:
-        raise ShapeError(
-            f"expected {expected_questions} questions per config, "
-            f"config {configs[0]} has {len(reference)}"
-        )
-    for config, questions in questions_by_config.items():
-        if questions != reference:
-            missing = sorted(set(reference) - set(questions))
-            extra = sorted(set(questions) - set(reference))
-            raise ShapeError(
-                f"config {config} does not cover the same question set as {configs[0]} "
-                f"(missing: {missing}, unexpected: {extra}) — the paired tests require identical pairing"
-            )
-
-    if len(rows) != expected_configs * expected_questions:
-        raise ShapeError(
-            f"expected {expected_configs * expected_questions} rows, got {len(rows)} "
-            "(duplicate runs for the same config/question?)"
-        )
-
-
-def _values(rows: Iterable[Row], metric: str) -> list[float | None]:
-    return [r.metric(metric) for r in rows]
+    """Assert the loaded rows are a complete 15-config x 20-question grid."""
+    assert_complete_grid(
+        rows,
+        key=lambda r: r.config,
+        noun="config",
+        noun_plural="configs",
+        expected_groups=expected_configs,
+        expected_questions=expected_questions,
+        phase_label="Phase-1",
+        run_command="run-phase1",
+    )
 
 
 def _by_config(rows: Sequence[Row]) -> dict[str, list[Row]]:
-    grouped: dict[str, list[Row]] = {}
-    for row in rows:
-        grouped.setdefault(row.config, []).append(row)
-    return {config: sorted(rs, key=lambda r: r.question_id) for config, rs in grouped.items()}
-
-
-def _mean_or_none(values: Iterable[float | None]) -> float | None:
-    present = clean_values(values)
-    return float(present.mean()) if present.size else None
+    return group_by(rows, lambda r: r.config)
 
 
 def rank_configs(rows: Sequence[Row]) -> list[str]:
@@ -199,10 +165,11 @@ def build_factor_analysis(rows: Sequence[Row], factor: str) -> dict:
     entries = []
     for level in levels:
         level_rows = [r for r in rows if getattr(r, factor) == level]
+        # Bucket once by question rather than re-filtering `level_rows` per question:
+        # the nested scan is 5 x 20 x 60 row visits per factor where this is 300.
+        by_question = group_by(level_rows, lambda r: r.question_id)
         per_question = [
-            _mean_or_none(
-                [r.metric(HEADLINE_METRIC) for r in level_rows if r.question_id == qid]
-            )
+            _mean_or_none(_values(by_question.get(qid, []), HEADLINE_METRIC))
             for qid in question_ids
         ]
         est: Estimate = estimate(per_question)

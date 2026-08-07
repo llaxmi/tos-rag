@@ -21,15 +21,26 @@ export interface CanonicalDocument {
   text: string;
 }
 
-/** Display names for the two frozen documents — the single source for UI labels. */
-export const DOC_LABELS: Record<string, string> = {
+/** Display names for the two frozen documents — the single source for UI labels.
+ *  Keyed by `DocId`, so a document added to the corpus fails to compile here
+ *  until it is given a label. */
+export const DOC_LABELS: Record<DocId, string> = {
   "github-tos": "GitHub ToS",
   "netflix-tou": "Netflix ToU",
 };
 
+/** Label for a document id that arrived as a plain string (an API response, a
+ *  stored row). An id outside the frozen corpus renders as itself rather than
+ *  blank — showing the raw id is a better failure than showing nothing. */
+export function docLabel(docId: string): string {
+  return DOC_LABELS[docId as DocId] ?? docId;
+}
+
 /** Re-exported, not re-declared: the arms are a frozen experimental control
  * owned by @tos-rag/core, and a second copy here could silently drift. */
-import { RETRIEVAL_K, type GeneratorModel } from "@tos-rag/core";
+import { DOC_IDS, RETRIEVAL_K, type DocId, type GeneratorModel } from "@tos-rag/core";
+export type { DocId };
+export { DOC_IDS };
 export type { GeneratorModel };
 export { RETRIEVAL_K };
 
@@ -60,7 +71,8 @@ export interface AskResponse {
   tokens: { input: number; output: number };
 }
 
-export type DocFilter = "github-tos" | "netflix-tou" | undefined;
+/** A document id, or undefined for "search both". */
+export type DocFilter = DocId | undefined;
 
 export interface AnalysisRow {
   analysis: string;

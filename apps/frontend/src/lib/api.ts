@@ -16,6 +16,19 @@ export type {
   PipelineConfig,
 } from "@tos-rag/shared";
 
+/** Prefers the backend's own reason for a failure — it names the actual cause
+ *  (a validation message, the sha256-drift refusal) — and falls back to
+ *  `fallback` only when the error body isn't JSON. */
+async function failure(res: Response, fallback: string): Promise<Error> {
+  let detail = "";
+  try {
+    detail = ((await res.json()) as { error?: string }).error ?? "";
+  } catch {
+    // non-JSON error body — fall through to the generic message
+  }
+  return new Error(detail || fallback);
+}
+
 export async function ask(
   question: string,
   docId: DocFilter,
@@ -37,15 +50,9 @@ export async function ask(
     }),
   });
   if (!res.ok) {
-    let detail = "";
-    try {
-      detail = ((await res.json()) as { error?: string }).error ?? "";
-    } catch {
-      // non-JSON error body — fall through to the generic message
-    }
-    throw new Error(
-      detail ||
-        `The service couldn't answer (HTTP ${res.status}). Check that the backend is running, then try again.`,
+    throw await failure(
+      res,
+      `The service couldn't answer (HTTP ${res.status}). Check that the backend is running, then try again.`,
     );
   }
   return (await res.json()) as AskResponse;
@@ -74,15 +81,9 @@ export async function getResults(): Promise<AnalysisRow[] | null> {
 export async function getDocument(docId: string): Promise<CanonicalDocument> {
   const res = await fetch(`/api/document/${docId}`);
   if (!res.ok) {
-    let detail = "";
-    try {
-      detail = ((await res.json()) as { error?: string }).error ?? "";
-    } catch {
-      // non-JSON error body — fall through to the generic message
-    }
-    throw new Error(
-      detail ||
-        `Couldn't load the source document (HTTP ${res.status}). Check that the backend is running, then try again.`,
+    throw await failure(
+      res,
+      `Couldn't load the source document (HTTP ${res.status}). Check that the backend is running, then try again.`,
     );
   }
   return (await res.json()) as CanonicalDocument;
