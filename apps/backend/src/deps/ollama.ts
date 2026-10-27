@@ -14,13 +14,6 @@ interface OllamaGenerateResponse {
   eval_count?: number;
 }
 
-/**
- * Llama generation via a local Ollama server (PRD §15 — replaces the prior
- * managed inference API). The three sampling controls are frozen experiment
- * constants: temperature 0,
- * seed 42, num_predict = GENERATION_MAX_TOKENS. `fetchImpl` is injectable so the
- * mapping stays unit-testable without a running server.
- */
 export async function generateOllama(
   cfg: OllamaConfig,
   prompt: string,
