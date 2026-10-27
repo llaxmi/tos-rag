@@ -7,7 +7,43 @@ A controlled experiment on **RAG pipeline design over Terms-of-Service documents
 - `docs/design.md` — the frontend/visual design spec.
 - `CLAUDE.md` — orientation for the codebase and its invariants.
 
-**This README is a step-by-step setup guide written for someone new to the project.** No prior knowledge of RAG, pgvector, or monorepos is assumed. Follow it top to bottom.
+The findings and limitations come first, below. After them, **the rest of this README is a step-by-step setup guide written for someone new to the project.** No prior knowledge of RAG, pgvector, or monorepos is assumed. Follow it top to bottom.
+
+---
+
+## Findings
+
+Corpus: 2 frozen documents (GitHub ToS, Netflix Terms of Use), 30 questions. Phase 1 uses 20 of them (16 answerable + 4 unanswerable); Phase 2 uses all 30, including 10 it had never seen. Answers are scored with CRAG Truthfulness (+1 accurate, 0 abstained, −1 hallucinated). Grading was done by an LLM judge (Claude Sonnet 5) that was checked against human labels.
+
+| | Result |
+| --- | --- |
+| **Phase 1 — chunking** (15 configs × 20 questions, Llama 3.1 8B) | `sentence:512` and `recursive:256` tie at 0.900 mean Truthfulness. The tiebreak is char-recall (0.985 vs 0.898), which picks **`sentence:512`**. The lowest configs, `fixed:128` and `section:512`, score 0.500. Changing only the chunking moves quality from 0.500 to 0.900, an 80% relative gain. The two winners got the same score on all 20 questions; the tiebreak decided, and `recursive:256` generates in about half the time. |
+| **Which factor mattered** | By strategy, **recursive** leads (0.833), then semantic and sentence (0.733), then fixed and section (0.600). By size, **256 tokens** leads (0.770), ahead of 512 (0.700) and 128 (0.630). All the confidence intervals overlap. |
+| **Retrieval recall is a poor target** | Four configs retrieve almost all the gold text (char-recall ≈ 0.98, hit rate 1.00), yet their Truthfulness ranges from 0.600 to 0.900. `fixed:512` retrieves perfectly and still ranks 11th of 15. |
+| **Phase 1 refusals** | Every config refused all 4 unanswerable questions (abstention recall 60/60). Precision is 0.952 after a manual audit: the 3 wrong refusals were all `section` configs on one question whose clause they never retrieved. |
+| **Is the Phase 1 winner actually better?** | **No, it can't be shown.** 0 of 14 best-vs-rest paired Wilcoxon tests survive Holm correction, and every BCa confidence interval overlaps. Most questions score the same under every config: each comparison has 16–20 ties out of 20, so it rests on at most 4 questions that differ. The ranking describes these runs only; it doesn't prove one config is better. |
+| **Phase 2 — generator** (`sentence:512`, 30 questions) | Claude Opus 4.8 **0.933** vs Llama 3.1 8B **0.600**. Opus wins on 5 questions, Llama on 0, and 25 tie. |
+| **Where the gap comes from** | All of it is in synthesis questions: `comparison` (Opus 1.000 vs Llama 0.000) and `multi_clause` (0.750 vs 0.000). On `factual` and `unanswerable` questions both models score 1.000. Retrieval is identical on 30/30 questions, so the gap comes only from generation. Faithfulness is close (0.972 vs 0.947), so Opus doesn't win by hallucinating less; it wins by combining clauses. |
+| **Cost** | Opus cost $0.672 for 30 runs ($0.022 per question), or **$0.134 per extra correct answer** over Llama. 84.3% of the bill is retrieved text going in, not the answer coming out, so retrieval depth (k) drives cost more than the choice of model. Llama is $0 in API cost because it ran locally. |
+| **Is the Phase 2 gap significant?** | **No, 0 of 5 tested metrics after Holm correction.** For Truthfulness the models differ on only 5 questions, so the smallest p-value an exact paired test can reach is 2/2⁵ = 0.0625. That's above 0.05 however big the effect is, so this test fails even before correction (raw p = 0.062). Cosine similarity is the only metric that passes uncorrected (p = 0.021), and it doesn't survive Holm (0.104). |
+| **Failure mode** | No Phase 2 answer scored CRAG 0. Every wrong answer was a hallucination, never a refusal. When the answer is in the retrieved text but has to be pieced together from several parts, neither model says "I don't know". |
+| **Judge validity** | The LLM judge agrees with human annotators at κ = 0.920 (95% CI 0.795–1.000). The two humans agree with each other at κ = 0.920. Both are well above the 0.61 gate. |
+
+**In one line:** chunking moves answer quality a lot in practice, and the generator matters for questions that need synthesis, not for simple lookups. With this many questions, though, the experiment can't statistically separate either chunking configs or generators. The thing holding it back is the number of questions, not the pipeline design.
+
+## Limitations
+
+- **Small question set.** With 20 questions in Phase 1 and 30 in Phase 2, mostly ties, there aren't enough differing questions for any comparison to reach significance. Treat every ranking as descriptive.
+- **Two documents.** Both are English consumer ToS. The results may not hold for other legal genres or for longer contracts.
+- **Gold spans were annotated once.** No second annotator marked the clause spans, so their inter-annotator κ can't be computed. Every config and generator is scored against the same spans, so any bias in them affects all arms equally. It doesn't touch Truthfulness.
+- **The judge was validated on a balanced sample.** κ was measured on 50 rows, 25 judged accurate and 25 incorrect. The real population is about 83% accurate, so κ describes the sample, not that population. Rows decided by a rule (exact match, abstention) weren't part of the validation.
+- **Abstention detection is a lower bound.** It only catches an answer that is exactly "I don't know". On `github-q15`, Opus explains the gap at length before saying "I don't know", so it counts as a miss (Opus abstention recall 0.750 vs Llama 1.000), even though the judge scored the answer +1.
+- **Some arm comparisons aren't fair.** Token counts come from each model's own tokenizer, so they can't be compared. Latency mixes hosted Opus with Llama running on a laptop, so it reflects hardware, not the models.
+- **Opus ran under one config only.** It was never tested on the other 14, so the generator result belongs to `sentence:512`.
+- **One fixed setup.** k = 5, temperature 0, seed 42, a single prompt, a single local embedder (EmbeddingGemma), and zero chunk overlap. None of these were varied.
+- **Scoring rule was amended mid-study.** A correct "I don't know" on an unanswerable question now scores +1 (PRD §15 #12). Stored answers were re-scored with no re-generation, and that change is what moved the Phase 1 winner from `recursive:256` to `sentence:512`.
+
+Full reasoning is in `docs/PRD.md` §15 (logged deviations) and the project report.
 
 ---
 
@@ -212,7 +248,17 @@ pnpm build          # currently only the frontend produces output
 pnpm ingest -- --doc <doc> --strategy <s> --size <n>   # load one config into the DB
 pnpm ingest -- --doc <doc> --all-configs               # load all 15 configs
 pnpm fetch-canonical github-tos                        # refresh a source document (see PRD §5)
+
+pnpm run-phase2                                        # Phase 2: winner × {Llama, Opus} × 30 questions
+pnpm analyze                                           # Python statistics → analysis_results (needs the DB)
+pnpm analyze --dry-run                                 # compute + print, write nothing
+pnpm backfill-metrics                                  # fill faithfulness/cosine/cost (dry run; --apply writes)
+pnpm rescore-crag                                      # re-score stored answers (dry run; --apply writes)
+pnpm judge-sample && pnpm judge-kappa                  # draw judge-validation sheets, then compute κ
 ```
+
+The Python analysis lives in `analysis/` and is managed with [uv](https://docs.astral.sh/uv/).
+Run `uv sync && uv run pytest` from that folder.
 
 Any package's own scripts run with `pnpm --filter <name> <script>`. Workspaces:
 `backend`, `frontend`, `@tos-rag/core`, `@tos-rag/shared`, `@tos-rag/ui`,
@@ -224,17 +270,29 @@ Any package's own scripts run with `pnpm --filter <name> <script>`. Workspaces:
 
 ```
 apps/
-  backend/     Hono API + local ingestion scripts (owns the live pipeline)
-  frontend/    React 19 + Vite web app (all network I/O via src/lib/api.ts)
+  backend/
+    src/app.ts          Hono routes (/api/ask, /api/results, /api/health), built from injected deps
+    src/deps/           live pipeline (pgvector retrieval, Ollama Llama, Anthropic Opus)
+    src/adapters/       local embedder, canonical loader, LLM judge
+    src/scripts/        one-shot CLIs: ingest, run-phase1/2, rescore-crag, backfill-metrics, …
+  frontend/             React 19 + Vite app: #/ ask (chat + evidence rail), #/results dashboard
 packages/
-  core/        the experiment's logic: chunkers, metrics, prompt, schemas, constants
-  shared/      API types shared by backend and frontend + presentation helpers
-  ui/          presentational React components (shadcn primitives + visualizations)
-  db/          database schema, migrations, seed, search helpers, local Supabase stack
+  core/                 the experiment's logic, no I/O
+    src/chunkers/       the 5 chunking strategies (offset-preserving)
+    src/metrics/        char-span precision/recall, SQuAD F1/EM, cosine
+    src/eval/           CRAG scoring, faithfulness, cost
+    src/orchestrator/   runOne: retrieve → generate → evaluate
+    src/questions/      question-set loading
+  shared/               API types shared by backend and frontend + presentation helpers
+  ui/                   presentational React components (shadcn primitives + visualizations)
+  db/                   Prisma schema, migrations, seed, search helpers, local Supabase stack
+analysis/               Python (uv): Wilcoxon, BCa bootstrap, Holm, judge κ → analysis_results
+  judge-validation/     blinded annotation sheets for the judge-vs-human check
 corpus/
-  canonical/   frozen Markdown documents — the source of truth for every passage
-  *.pdf        archival snapshots (never parsed by the pipeline)
-docs/          PRD (authoritative), architecture, design
+  canonical/            frozen Markdown documents, the source of truth for every passage
+  questions/            question sets (*.jsonl) + authoring YAML with gold quotes
+  *.pdf                 archival snapshots (never parsed by the pipeline)
+docs/                   PRD (authoritative), architecture, design, superpowers plans/specs
 ```
 
 ---
