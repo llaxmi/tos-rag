@@ -1,6 +1,7 @@
 {
   "name": "tos-rag",
   "private": true,
+  "license": "MIT",
   "packageManager": "pnpm@11.12.0",
   "scripts": {
     "dev": "turbo run dev",
