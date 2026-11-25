@@ -2,10 +2,7 @@
 
 A controlled experiment on **RAG pipeline design over Terms-of-Service documents**, plus a public demo of the resulting pipeline. Phase 1 sweeps 5 chunking strategies × 3 chunk sizes (15 configs) with a fixed generator; Phase 2 compares Llama 3.1 8B vs Claude Opus 4.8 under the winning config.
 
-- `docs/PRD.md` — the authoritative spec (experimental design, data model, metrics, acceptance criteria).
-- `docs/architecture.md` — how the pieces fit together.
-- `docs/design.md` — the frontend/visual design spec.
-- `CLAUDE.md` — orientation for the codebase and its invariants.
+This repository publishes the **pipeline** (chunking, retrieval, generation, evaluation, statistics) and the **corpus** it runs over. The spec, design docs and demo web frontend are kept private.
 
 The findings and limitations come first, below. After them, **the rest of this README is a step-by-step setup guide written for someone new to the project.** No prior knowledge of RAG, pgvector, or monorepos is assumed. Follow it top to bottom.
 
@@ -41,9 +38,9 @@ Corpus: 2 frozen documents (GitHub ToS, Netflix Terms of Use), 30 questions. Pha
 - **Some arm comparisons aren't fair.** Token counts come from each model's own tokenizer, so they can't be compared. Latency mixes hosted Opus with Llama running on a laptop, so it reflects hardware, not the models.
 - **Opus ran under one config only.** It was never tested on the other 14, so the generator result belongs to `sentence:512`.
 - **One fixed setup.** k = 5, temperature 0, seed 42, a single prompt, a single local embedder (EmbeddingGemma), and zero chunk overlap. None of these were varied.
-- **Scoring rule was amended mid-study.** A correct "I don't know" on an unanswerable question now scores +1 (PRD §15 #12). Stored answers were re-scored with no re-generation, and that change is what moved the Phase 1 winner from `recursive:256` to `sentence:512`.
+- **Scoring rule was amended mid-study.** A correct "I don't know" on an unanswerable question now scores +1 (a logged protocol amendment). Stored answers were re-scored with no re-generation, and that change is what moved the Phase 1 winner from `recursive:256` to `sentence:512`.
 
-Full reasoning is in `docs/PRD.md` §15 (logged deviations) and the project report.
+Full reasoning is in the project report.
 
 ---
 
@@ -53,7 +50,7 @@ The app answers questions about legal Terms-of-Service documents by (1) finding 
 
 | Piece | What it is | Why it's here |
 | --- | --- | --- |
-| **The app** | A backend API + a web page | What you actually open in the browser |
+| **The backend** | An HTTP API (`/api/ask`, `/api/results`) plus one-shot scripts | Runs the pipeline end to end |
 | **Postgres + pgvector** | A database that can search by meaning | Stores the document passages and finds relevant ones |
 | **Ollama** | Runs an AI model locally on your computer | Generates the "Llama" answers, free and offline |
 | **Embedder** | A small AI model (~1.2 GB) that downloads itself on first use | Turns text into the numbers the database searches over |
@@ -120,11 +117,16 @@ ollama pull llama3.1:8b
 # 5. Load a document into the database (~1.2 GB embedder downloads on first run)
 pnpm ingest -- --doc github-tos --strategy sentence --size 256
 
-# 6. Run the app
+# 6. Run the backend
 pnpm dev
 ```
 
-Then open **http://localhost:5173** and ask a question about the GitHub Terms of Service.
+Then ask a question about the GitHub Terms of Service (matching the config you ingested):
+
+```bash
+curl -s localhost:3000/api/ask -H 'content-type: application/json' \
+  -d '{"question":"How many free accounts can one person have?","docId":"github-tos","strategy":"sentence","chunkSize":256}'
+```
 
 ---
 
@@ -210,18 +212,13 @@ pnpm ingest -- --doc github-tos --all-configs
 
 > ℹ️ The `--` before the flags is required — pnpm needs it to pass the flags through to the script. Available documents: `github-tos`, `netflix-tou`.
 
-### 6. Run the app
+### 6. Run the backend
 
 ```bash
 pnpm dev
 ```
 
-This starts both halves at once:
-
-- **Backend API** → http://localhost:3000
-- **Web page** → **http://localhost:5173** ← open this one
-
-Open **http://localhost:5173** and ask a question about the document you ingested. To stop the app, press `Ctrl+C` in that terminal.
+This starts the backend API on **http://localhost:3000**. `GET /api/health` confirms it is up, and `POST /api/ask` answers a question about the document you ingested. To stop it, press `Ctrl+C` in that terminal.
 
 ---
 
@@ -240,14 +237,13 @@ The `pnpm test` suite runs against fakes, so it passes without Postgres, Ollama,
 ## Common commands
 
 ```bash
-pnpm dev            # backend (:3000) + frontend (:5173) together
+pnpm dev            # backend API on :3000 (tsx watch)
 pnpm test           # run all unit tests
 pnpm typecheck      # type-check everything
-pnpm build          # currently only the frontend produces output
 
 pnpm ingest -- --doc <doc> --strategy <s> --size <n>   # load one config into the DB
 pnpm ingest -- --doc <doc> --all-configs               # load all 15 configs
-pnpm fetch-canonical github-tos                        # refresh a source document (see PRD §5)
+pnpm fetch-canonical github-tos                        # refresh a source document (freeze protocol)
 
 pnpm run-phase2                                        # Phase 2: winner × {Llama, Opus} × 30 questions
 pnpm analyze                                           # Python statistics → analysis_results (needs the DB)
@@ -261,8 +257,7 @@ The Python analysis lives in `analysis/` and is managed with [uv](https://docs.a
 Run `uv sync && uv run pytest` from that folder.
 
 Any package's own scripts run with `pnpm --filter <name> <script>`. Workspaces:
-`backend`, `frontend`, `@tos-rag/core`, `@tos-rag/shared`, `@tos-rag/ui`,
-`@tos-rag/db`.
+`backend`, `@tos-rag/core`, `@tos-rag/shared`, `@tos-rag/db`.
 
 ---
 
@@ -275,7 +270,6 @@ apps/
     src/deps/           live pipeline (pgvector retrieval, Ollama Llama, Anthropic Opus)
     src/adapters/       local embedder, canonical loader, LLM judge
     src/scripts/        one-shot CLIs: ingest, run-phase1/2, rescore-crag, backfill-metrics, …
-  frontend/             React 19 + Vite app: #/ ask (chat + evidence rail), #/results dashboard
 packages/
   core/                 the experiment's logic, no I/O
     src/chunkers/       the 5 chunking strategies (offset-preserving)
@@ -283,8 +277,7 @@ packages/
     src/eval/           CRAG scoring, faithfulness, cost
     src/orchestrator/   runOne: retrieve → generate → evaluate
     src/questions/      question-set loading
-  shared/               API types shared by backend and frontend + presentation helpers
-  ui/                   presentational React components (shadcn primitives + visualizations)
+  shared/               API contract types used by the backend
   db/                   Prisma schema, migrations, seed, search helpers, local Supabase stack
 analysis/               Python (uv): Wilcoxon, BCa bootstrap, Holm, judge κ → analysis_results
   judge-validation/     blinded annotation sheets for the judge-vs-human check
@@ -292,7 +285,6 @@ corpus/
   canonical/            frozen Markdown documents, the source of truth for every passage
   questions/            question sets (*.jsonl) + authoring YAML with gold quotes
   *.pdf                 archival snapshots (never parsed by the pipeline)
-docs/                   PRD (authoritative), architecture, design, superpowers plans/specs
 ```
 
 ---

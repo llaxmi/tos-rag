@@ -12,3 +12,21 @@ __pycache__/
 
 # Local AI-assistant session scratch (briefs, diffs, snapshots)
 .superpowers/
+
+# Public repo shows only the pipeline (core, backend, db, shared, analysis) and corpus.
+# Everything below stays on disk locally but is not published.
+apps/frontend/
+packages/ui/
+docs/
+CLAUDE.md
+
+# Env variants (the root `.env` rule above only matches that exact name)
+.env.*
+!.env.example
+
+# Local tooling / editor / test output
+.claude/
+.vscode/
+.idea/
+coverage/
+*.log
